@@ -1,0 +1,5 @@
+#Latex extensions
+*.aux
+*.log
+*.out
+*.toc
