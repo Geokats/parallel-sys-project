@@ -146,6 +146,27 @@ tabsize=4
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Main Document %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \pagenumbering{arabic}
 
+\section{Εισαγωγή}
+HEAT2D is based on a simplified two-dimensional heat equation domain
+decomposition. The initial temperature is computed to be high in the middle of
+the domain and zero at the boundaries. The boundaries are held at zero
+throughout the simulation. During the time-stepping, an array containing two
+domains is used; these domains alternate between old data and new data. At each
+time step, worker processes must exchange border data with neighbors, because a
+grid point's current temperature depends upon its previous time step value plus
+the values of the neighboring grid points.
+
+Για κάθε τετράγωνο του πλέγματος η τιμή της θερμοκρασίας στο επόμενο time-step
+υπολογίζεται από την εξής εξίσωση:
+
+\begin{align*}
+	u'[x][y] & = u[x][y] \\
+	& + c_x * ( u[x+1][y] + u[x-1][y] - 2 * u[x][y] ) \\
+	& + c_y * ( u[x][y+1] + u[x][y-1] - 2 * u[x][y] ) \\
+\end{align*}
+
+Όπου $c_x = c_y = 0.1$ σταθερές.
+
 \section{Μεταγλώττιση \& Εκτέλεση}
 \subsection{Μεταγλώττιση}
 Τα προγράμματα μεταγλωττίζονται με τη χρήση του αρχείου Makefile και συγκεκριμένα
