@@ -7,7 +7,7 @@
 #PBS -l walltime=0:01:00  		# Example, 1 minute
 
 # How many nodes and tasks per node
-#PBS -l nodes=2:ppn=8  			# 2 nodes with 8 tasks/node => 16 tasks
+#PBS -l nodes=2:ppn=4  			# 2 nodes with 8 tasks/node => 16 tasks
 
 #Which Queue
 #PBS -q parsys			 	# This is the only accessible queue for rbs
