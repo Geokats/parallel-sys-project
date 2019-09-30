@@ -35,6 +35,8 @@
 #define BEGIN       1                  /* message tag */
 #define LTAG        2                  /* message tag */
 #define RTAG        3                  /* message tag */
+#define UTAG        4                  /* message tag */
+#define DTAG        5                  /* message tag */
 #define NONE        0                  /* indicates no neighbor */
 #define DONE        4                  /* message tag */
 #define MASTER      0                  /* taskid of first process */
@@ -229,16 +231,28 @@ int main (int argc, char *argv[]) {
     iz = 0;
     for (it = 1; it <= STEPS; it++) {
       if (left != NONE) {
-        MPI_Send(&u[iz][offset_row][0], NYPROB, MPI_FLOAT, left, RTAG, MPI_COMM_WORLD);
+        MPI_Send(&u[iz][offset_row][offset_column], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD);
         source = left;
         msgtype = LTAG;
-        MPI_Recv(&u[iz][offset_row-1][0], NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&u[iz][offset_row][offset_column-1], 1, MPI_COLUMN, source, msgtype, MPI_COMM_WORLD, &status);
+      }
+      if (up != NONE) {
+        MPI_Send(&u[iz][offset_row][offset_column], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD);
+        source = up;
+        msgtype = UTAG;
+        MPI_Recv(&u[iz][offset_row-1][offset_column], 1, MPI_ROW, source, msgtype, MPI_COMM_WORLD, &status);
       }
       if (right != NONE) {
-        MPI_Send(&u[iz][offset_row+rows-1][0], NYPROB, MPI_FLOAT, right, LTAG, MPI_COMM_WORLD);
+        MPI_Send(&u[iz][offset_row][offset_column+columns-1], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD);
         source = right;
         msgtype = RTAG;
-        MPI_Recv(&u[iz][offset_row+rows][0], NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&u[iz][offset_row][offset_column+columns], 1, MPI_COLUMN, source, msgtype, MPI_COMM_WORLD, &status);
+      }
+      if (down != NONE) {
+        MPI_Send(&u[iz][offset_row+rows-1][offset_column], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD);
+        source = down;
+        msgtype = DTAG;
+        MPI_Recv(&u[iz][offset_row+rows][offset_column], 1, MPI_ROW, source, msgtype, MPI_COMM_WORLD, &status);
       }
       /* Now call update to update the value of grid points */
       update(start, end, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
