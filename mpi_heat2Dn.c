@@ -62,6 +62,7 @@ int main (int argc, char *argv[]) {
 	int i,j,ix,iy,iz,it;            /* loop variables */
   double workers_root;            /* square root of workers to divide the grid*/
   MPI_Status status;
+  MPI_Datatype MPI_ROW, MPI_COLUMN; /* datatypes used for efficient data transfers between workers */
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -209,6 +210,17 @@ int main (int argc, char *argv[]) {
       column_end = column_start+columns-2;
     else
       column_end = column_start+columns-1;
+
+    /* Create row and column datatypes. This way we can efficiently send a column
+    * from the table without having to copy it to a buffer. More specifically:
+    * A row has <column-size> blocks each of which contain 1 MPI_DOUBLE and there
+    * is 1 block between the starts of each block in our table.
+    * A column has <row-size> blocks each of which contain 1 MPI_DOUBLE and
+    * there are <row-size> blocks between the start of each block in our table */
+    MPI_Type_vector(columns, 1, 1, MPI_DOUBLE, &MPI_ROW);
+    MPI_Type_vector(rows, 1, rows, MPI_DOUBLE , &MPI_COLUMN);
+    MPI_Type_commit(&MPI_ROW);
+    MPI_Type_commit(&MPI_COLUMN);
 
     /* Begin doing STEPS iterations.  Must communicate border rows with
     *  neighbors.  If I have the first or last grid row, then I only need
