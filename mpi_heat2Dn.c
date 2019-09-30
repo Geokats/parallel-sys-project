@@ -232,27 +232,19 @@ int main (int argc, char *argv[]) {
     for (it = 1; it <= STEPS; it++) {
       if (left != NONE) {
         MPI_Send(&u[iz][offset_row][offset_column], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD);
-        source = left;
-        msgtype = LTAG;
-        MPI_Recv(&u[iz][offset_row][offset_column-1], 1, MPI_COLUMN, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&u[iz][offset_row][offset_column-1], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &status);
       }
       if (up != NONE) {
         MPI_Send(&u[iz][offset_row][offset_column], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD);
-        source = up;
-        msgtype = UTAG;
-        MPI_Recv(&u[iz][offset_row-1][offset_column], 1, MPI_ROW, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&u[iz][offset_row-1][offset_column], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &status);
       }
       if (right != NONE) {
         MPI_Send(&u[iz][offset_row][offset_column+columns-1], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD);
-        source = right;
-        msgtype = RTAG;
-        MPI_Recv(&u[iz][offset_row][offset_column+columns], 1, MPI_COLUMN, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&u[iz][offset_row][offset_column+columns], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &status);
       }
       if (down != NONE) {
         MPI_Send(&u[iz][offset_row+rows-1][offset_column], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD);
-        source = down;
-        msgtype = DTAG;
-        MPI_Recv(&u[iz][offset_row+rows][offset_column], 1, MPI_ROW, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&u[iz][offset_row+rows][offset_column], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &status);
       }
       /* Now call update to update the value of grid points */
       update(start, end, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
