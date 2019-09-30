@@ -22,7 +22,7 @@
 *   to MPI: George L. Gusciora (1/95)
 * LAST REVISED: 04/02/05
 *******************************************************************************/
-/*#include <mpi.h>*/
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -225,8 +225,10 @@ int main (int argc, char *argv[]) {
    }
 }
 
-
 /****************************** subroutine update *****************************/
+/* u2[ix][iy] = u1[ix][iy]
+                + cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2 * u1[ix][iy] )
+                + cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2 * u1[xi][yi] ) */
 void update(int start, int end, int ny, float *u1, float *u2) {
   int ix, iy;
   for (ix = start; ix <= end; ix++)
