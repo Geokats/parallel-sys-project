@@ -55,8 +55,10 @@ int main (int argc, char *argv[]) {
   offset_column,extra_column;     /* for sending columns of data*/
 	int dest, source;               /* to - from for message send-receive */
 	int left,right,up,down;         /* neighbor tasks */
+  int row_start, row_end;         /* worker's row borders */
+  int column_start, column_end;   /* worker's column borders */
 	int msgtype;                    /* for message types */
-	int rc,start,end;               /* misc */
+	int rc;                         /* misc */
 	int i,j,ix,iy,iz,it;            /* loop variables */
   double workers_root;            /* square root of workers to divide the grid*/
   MPI_Status status;
@@ -104,12 +106,12 @@ int main (int argc, char *argv[]) {
       rows = (i <= extra_row) ? ave_row+1 : ave_row; /*den eimai sigouros akoma an douleuei swsta twra auto*/
       for (j=1;j<=workers_root;j++)
       {
-        /*The destination id is calculated using the number of full row sets, and column 
-        * sets we've assigned in this row. Given that, the worker's neighbors to the 
-        * left and right are +-1 respectively, and its up and down 
+        /*The destination id is calculated using the number of full row sets, and column
+        * sets we've assigned in this row. Given that, the worker's neighbors to the
+        * left and right are +-1 respectively, and its up and down
         * neighbors are +-workers_root. */
         dest = (i-1)*workers_root + j;
-        
+
         /* Tell each worker who its neighbors are, since they must exchange
         *  data with each other. */
 
@@ -123,14 +125,14 @@ int main (int argc, char *argv[]) {
             down = dest + workers_root;
           if (j == 1)
             left = NONE;
-          else 
+          else
             left = dest - 1;
           if (j == workers_root)
             right = NONE;
           else
-            right = dest+1; 
+            right = dest+1;
 
-        /*apo edw kai katw ola idia - sigoura prepei na allaksei to offset apla den ithela na peiraksw mono ena pragma*/      
+        /*apo edw kai katw ola idia - sigoura prepei na allaksei to offset apla den ithela na peiraksw mono ena pragma*/
 
 
         /* Now send startup information to each worker */
@@ -173,26 +175,40 @@ int main (int argc, char *argv[]) {
         for (iy=0; iy<NYPROB; iy++)
           u[iz][ix][iy] = 0.0;
 
-    /* Receive my offset, rows, neighbors and grid partition from master */
+    /* Receive my offsets, rows, columns, neighbors and grid partition from master */
     source = MASTER;
     msgtype = BEGIN;
-    MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&offset_row, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
     MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&offset_column, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&columns, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
     MPI_Recv(&left, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
     MPI_Recv(&right, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&up, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&down, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
     MPI_Recv(&u[0][offset][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
 
     /* Determine border elements.  Need to consider first and last columns.
     *  Obviously, row 0 can't exchange with row 0-1.  Likewise, the last
     *  row can't exchange with last+1. */
-    if (offset==0)
-      start=1;
+    if (offset_row == 0)
+      row_start = 1;
     else
-      start=offset;
-    if ((offset+rows)==NXPROB)
-      end=start+rows-2;
+      row_start = offset_row;
+    if ((offset_row+rows) == NXPROB)
+      row_end = row_start+rows-2;
     else
-      end = start+rows-1;
+      row_end = row_start+rows-1;
+
+    /*  Τhe same goes for columns. */
+    if (offset_column == 0)
+      column_start = 1;
+    else
+      column_start = offset_column;
+    if ((offset_column+columns) == NYPROB)
+      column_end = column_start+columns-2;
+    else
+      column_end = column_start+columns-1;
 
     /* Begin doing STEPS iterations.  Must communicate border rows with
     *  neighbors.  If I have the first or last grid row, then I only need
@@ -201,16 +217,16 @@ int main (int argc, char *argv[]) {
     iz = 0;
     for (it = 1; it <= STEPS; it++) {
       if (left != NONE) {
-        MPI_Send(&u[iz][offset][0], NYPROB, MPI_FLOAT, left, RTAG, MPI_COMM_WORLD);
+        MPI_Send(&u[iz][offset_row][0], NYPROB, MPI_FLOAT, left, RTAG, MPI_COMM_WORLD);
         source = left;
         msgtype = LTAG;
-        MPI_Recv(&u[iz][offset-1][0], NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&u[iz][offset_row-1][0], NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
       }
       if (right != NONE) {
-        MPI_Send(&u[iz][offset+rows-1][0], NYPROB, MPI_FLOAT, right, LTAG, MPI_COMM_WORLD);
+        MPI_Send(&u[iz][offset_row+rows-1][0], NYPROB, MPI_FLOAT, right, LTAG, MPI_COMM_WORLD);
         source = right;
         msgtype = RTAG;
-        MPI_Recv(&u[iz][offset+rows][0], NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&u[iz][offset_row+rows][0], NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
       }
       /* Now call update to update the value of grid points */
       update(start, end, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
