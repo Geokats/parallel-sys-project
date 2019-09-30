@@ -247,7 +247,7 @@ int main (int argc, char *argv[]) {
         MPI_Recv(&u[iz][offset_row+rows][offset_column], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &status);
       }
       /* Now call update to update the value of grid points */
-      update(start, end, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
+      update(row_start, row_end, column_start, column_end, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
       iz = 1 - iz;
     }
 
@@ -263,10 +263,10 @@ int main (int argc, char *argv[]) {
 /* u2[ix][iy] = u1[ix][iy]
                 + cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2 * u1[ix][iy] )
                 + cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2 * u1[xi][yi] ) */
-void update(int start, int end, int ny, float *u1, float *u2) {
+void update(int x_start, int x_end, int y_start, int y_end,int ny, float *u1, float *u2) {
   int ix, iy;
-  for (ix = start; ix <= end; ix++)
-    for (iy = 1; iy <= ny-2; iy++)
+  for (ix = x_start; ix <= x_end; ix++)
+    for (iy = y_start; iy <= y_end; iy++)
       *(u2+ix*ny+iy) = *(u1+ix*ny+iy)  +
                       parms.cx * (*(u1+(ix+1)*ny+iy) +
                       *(u1+(ix-1)*ny+iy) -
