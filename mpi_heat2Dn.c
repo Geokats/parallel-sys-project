@@ -82,69 +82,60 @@ int main (int argc, char *argv[]) {
     /* Initialize grid */
     printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
     printf("Initializing grid and writing initial.dat file...\n");
-    inidat(NXPROB, NYPROB, u);
-    prtdat(NXPROB, NYPROB, u, "initial.dat");
+  }
+  prtdat(NXPROB, NYPROB, u, "initial.dat");
 
-    /* Distribute work to workers.  Must first figure out how many rows to
-    *  send and what to do with extra rows. */
+  /* Distribute work to workers.  Must first figure out how many rows to
+  *  send and what to do with extra rows. */
 
-    workers_root = sqrt(numworkers);
+  workers_root = sqrt(numworkers);
 
-    ave_row = NXPROB/(int)workers_root;
-    extra_row = NXPROB%(int)workers_root;
-    offset_row = 0;
+  /*Calculate the size of your grid, starting with the rows.
+  * Also find which part of the whole(grid-wise) this task is.
+  * Placement is the place where the first row/column would fit
+  * in the big grid.Find the first row of the last task.*/
+  ave_row = NXPROB/(int)workers_root;
+  extra_row = NXPROB%(int)workers_root;
+  placement_row = taskid/(int)workers_root * ave_row;
+  last_first_row = NXPROB-ave_row-1;
 
-    /*Same treatment for columns. Figure out how many columns to send
-    * and what to do with extra columns. */
-    ave_column = NYPROB/(int)numworkers;
-    extra_column = NYPROB%(int)numworkers;
-    offset_column = 0;
+  /*Same treatment for columns. */
+  ave_column = NYPROB/(int)numworkers;
+  extra_column = NYPROB%(int)numworkers;
+  placement_column = taskid%(int)workers_root * ave_column;
+  last_first_column = NYPROB-ave_column-1;
 
-    for (i=1; i<=workers_root; i++) {
-      rows = (i <= extra_row) ? ave_row+1 : ave_row; /*den eimai sigouros akoma an douleuei swsta twra auto*/
-      for (j=1;j<=workers_root;j++)
-      {
-        /*The destination id is calculated using the number of full row sets, and column 
-        * sets we've assigned in this row. Given that, the worker's neighbors to the 
-        * left and right are +-1 respectively, and its up and down 
-        * neighbors are +-workers_root. */
-        dest = (i-1)*workers_root + j;
-        
-        /* Tell each worker who its neighbors are, since they must exchange
-        *  data with each other. */
-
-          if (i == 1)
-            up = NONE;
-          else
-            up = dest - workers_root;
-          if (i == workers_root)
-            down = NONE;
-          else
-            down = dest + workers_root;
-          if (j == 1)
-            left = NONE;
-          else 
-            left = dest - 1;
-          if (j == workers_root)
-            right = NONE;
-          else
-            right = dest+1; 
-
-        /*apo edw kai katw ola idia - sigoura prepei na allaksei to offset apla den ithela na peiraksw mono ena pragma*/      
+  rows = (i <= extra_row) ? ave_row+1 : ave_row; /*den eimai sigouros akoma an douleuei swsta twra auto*/
 
 
-        /* Now send startup information to each worker */
-        MPI_Send(&offset_row, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
-        MPI_Send(&rows, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
-        MPI_Send(&up, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
-        MPI_Send(&down, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
-        MPI_Send(&u[0][offset_row][0], rows*NYPROB, MPI_FLOAT, dest, BEGIN, MPI_COMM_WORLD);
-        printf("Sent to task %d: rows= %d offset= %d ",dest, rows, offset_row);
-        printf("up= %d down= %d\n", up, down);
-        offset_row = offset_row + rows;
-        offset_column = offset_column + rows;
-      }
-    }
+  /*Due to the way we split the grid (top to bottom,
+  * left to right), the worker's neighbors' id to the 
+  * left and right are -1,+1 respectively, and its up and down 
+  * neighbors are -workers_root,+workers_roote. */
+
+    if (placement_row == 0)
+      up = NONE;
+    else
+      up = dest - workers_root;
+    if (placement_row == last_first_row)
+      down = NONE;
+    else
+      down = taskid + workers_root;
+    if (placement_column == 1)
+      left = NONE;
+    else 
+      left = taskid - 1;
+    if (placement_column == last_first_column)
+      right = NONE;
+    else
+      right = dest+1; 
+
+  printf("Started task %d: rows= %d offset= %d ",taskid, rows, placement_row);
+  printf("up= %d down= %d left= %d right= %d\n", up, down, left, right);
+
+
+  if (taskid==MASTER)
+  {
     /* Now wait for results from all worker tasks */
     for (i=1; i<=numworkers; i++) {
       source = i;
