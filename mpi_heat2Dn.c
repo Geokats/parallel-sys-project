@@ -25,6 +25,7 @@
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define NXPROB      20                 /* x dimension of problem grid */
 #define NYPROB      20                 /* y dimension of problem grid */
@@ -49,12 +50,15 @@ int main (int argc, char *argv[]) {
   int	taskid;                     /* this task's unique id */
   int numworkers;                 /* number of worker processes */
 	int numtasks;                   /* number of tasks */
-	int averow,rows,offset,extra;   /* for sending rows of data */
+	int ave_row,rows,offset_row,extra_row;   /* for sending rows of data */
+  int ave_column,columns,
+  offset_column,extra_column;     /* for sending columns of data*/
 	int dest, source;               /* to - from for message send-receive */
-	int left,right;                 /* neighbor tasks */
+	int left,right,up,down;         /* neighbor tasks */
 	int msgtype;                    /* for message types */
 	int rc,start,end;               /* misc */
-	int i,ix,iy,iz,it;              /* loop variables */
+	int i,j,ix,iy,iz,it;            /* loop variables */
+  double workers_root;            /* square root of workers to divide the grid*/
   MPI_Status status;
 
 
@@ -83,32 +87,63 @@ int main (int argc, char *argv[]) {
 
     /* Distribute work to workers.  Must first figure out how many rows to
     *  send and what to do with extra rows. */
-    averow = NXPROB/numworkers;
-    extra = NXPROB%numworkers;
-    offset = 0;
-    for (i=1; i<=numworkers; i++) {
-      rows = (i <= extra) ? averow+1 : averow;
-      /* Tell each worker who its neighbors are, since they must exchange
-      *  data with each other. */
-      if (i == 1)
-        left = NONE;
-      else
-        left = i - 1;
-      if (i == numworkers)
-        right = NONE;
-      else
-        right = i + 1;
 
-      /* Now send startup information to each worker */
-      dest = i;
-      MPI_Send(&offset, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
-      MPI_Send(&rows, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
-      MPI_Send(&left, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
-      MPI_Send(&right, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
-      MPI_Send(&u[0][offset][0], rows*NYPROB, MPI_FLOAT, dest, BEGIN, MPI_COMM_WORLD);
-      printf("Sent to task %d: rows= %d offset= %d ",dest, rows, offset);
-      printf("left= %d right= %d\n", left, right);
-      offset = offset + rows;
+    workers_root = sqrt(numworkers);
+
+    ave_row = NXPROB/(int)workers_root;
+    extra_row = NXPROB%(int)workers_root;
+    offset_row = 0;
+
+    /*Same treatment for columns. Figure out how many columns to send
+    * and what to do with extra columns. */
+    ave_column = NYPROB/(int)numworkers;
+    extra_column = NYPROB%(int)numworkers;
+    offset_column = 0;
+
+    for (i=1; i<=workers_root; i++) {
+      rows = (i <= extra_row) ? ave_row+1 : ave_row; /*den eimai sigouros akoma an douleuei swsta twra auto*/
+      for (j=1;j<=workers_root;j++)
+      {
+        /*The destination id is calculated using the number of full row sets, and column 
+        * sets we've assigned in this row. Given that, the worker's neighbors to the 
+        * left and right are +-1 respectively, and its up and down 
+        * neighbors are +-workers_root. */
+        dest = (i-1)*workers_root + j;
+        
+        /* Tell each worker who its neighbors are, since they must exchange
+        *  data with each other. */
+
+          if (i == 1)
+            up = NONE;
+          else
+            up = dest - workers_root;
+          if (i == workers_root)
+            down = NONE;
+          else
+            down = dest + workers_root;
+          if (j == 1)
+            left = NONE;
+          else 
+            left = dest - 1;
+          if (j == workers_root)
+            right = NONE;
+          else
+            right = dest+1; 
+
+        /*apo edw kai katw ola idia - sigoura prepei na allaksei to offset apla den ithela na peiraksw mono ena pragma*/      
+
+
+        /* Now send startup information to each worker */
+        MPI_Send(&offset_row, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
+        MPI_Send(&rows, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
+        MPI_Send(&up, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
+        MPI_Send(&down, 1, MPI_INT, dest, BEGIN, MPI_COMM_WORLD);
+        MPI_Send(&u[0][offset_row][0], rows*NYPROB, MPI_FLOAT, dest, BEGIN, MPI_COMM_WORLD);
+        printf("Sent to task %d: rows= %d offset= %d ",dest, rows, offset_row);
+        printf("up= %d down= %d\n", up, down);
+        offset_row = offset_row + rows;
+        offset_column = offset_column + rows;
+      }
     }
     /* Now wait for results from all worker tasks */
     for (i=1; i<=numworkers; i++) {
@@ -116,7 +151,7 @@ int main (int argc, char *argv[]) {
       msgtype = DONE;
       MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
       MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-      MPI_Recv(&u[0][offset][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+      MPI_Recv(&u[0][offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
     }
 
     /* Write final output, call X graph and finalize MPI */
@@ -189,7 +224,6 @@ int main (int argc, char *argv[]) {
     MPI_Finalize();
    }
 }
-
 
 /****************************** subroutine update *****************************/
 /* u2[ix][iy] = u1[ix][iy]
