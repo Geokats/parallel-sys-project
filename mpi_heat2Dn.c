@@ -65,7 +65,7 @@ int main (int argc, char *argv[]) {
   double workers_root;            /* square root of workers to divide the grid*/
   MPI_Status status;
   MPI_Datatype MPI_ROW, MPI_COLUMN; /* datatypes used for efficient data transfers between workers */
-  MPI_Comm MPI_CART_COMM
+  MPI_Comm MPI_CART_COMM;
   int cart_ndims = 2;
   int cart_dims[2] = {0, 0};
   int cart_periods[2] = {1, 1};
@@ -92,7 +92,7 @@ int main (int argc, char *argv[]) {
   /* Get the name of the physical node the process is running in */
   char p_name[MPI_MAX_PROCESSOR_NAME];
   int p_name_len;
-  MPI_Get_processor_name(&p_name, &p_name_len);
+  MPI_Get_processor_name(p_name, &p_name_len);
   printf("Process #%d is running in processor: %s", taskid, p_name);
 
   MPI_Finalize(); //For debugging
@@ -179,7 +179,7 @@ int main (int argc, char *argv[]) {
     for (i=1; i<=numworkers; i++) {
       source = i;
       msgtype = DONE;
-      MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+      // MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
       MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
       MPI_Recv(&u[0][offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
     }
