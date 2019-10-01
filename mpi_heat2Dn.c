@@ -50,9 +50,9 @@ int main (int argc, char *argv[]) {
   int	taskid;                     /* this task's unique id */
   int numworkers;                 /* number of worker processes */
 	int numtasks;                   /* number of tasks */
-	int ave_row,rows,placement_row, /* for sending rows of data */
+	int ave_row,rows,offset_row, /* for sending rows of data */
   extra_row,last_first_row;
-  int ave_column,columns,placement_column,
+  int ave_column,columns,offset_column,
   extra_column,last_first_column; /* for sending columns of data*/
 	int dest, source;               /* to - from for message send-receive */
 	int left,right,up,down;         /* neighbor tasks */
@@ -95,17 +95,17 @@ int main (int argc, char *argv[]) {
 
   /* Calculate the size of your grid, starting with the rows.
   *  Also find which part of the whole(grid-wise) this task is.
-  *  Placement is the place where the first row/column would fit
+  *  Offset is the place where the first row/column would fit
   *  in the big grid.Find the first row of the last task.*/
   ave_row = NXPROB/(int)workers_root;
   extra_row = NXPROB%(int)workers_root;
-  placement_row = taskid/(int)workers_root * ave_row;
+  offset_row = taskid/(int)workers_root * ave_row;
   last_first_row = NXPROB-ave_row-1;
 
   /*Same treatment for columns. */
   ave_column = NYPROB/(int)numworkers;
   extra_column = NYPROB%(int)numworkers;
-  placement_column = taskid%(int)workers_root * ave_column;
+  offset_column = taskid%(int)workers_root * ave_column;
   last_first_column = NYPROB-ave_column-1;
 
   /*Allocate grid memory and initialize it*/  
@@ -125,24 +125,24 @@ int main (int argc, char *argv[]) {
   *  left and right are -1,+1 respectively, and its up and down 
   *  neighbors are -workers_root,+workers_roote. */
 
-  if (placement_row == 0)
+  if (offset_row == 0)
     up = NONE;
   else
     up = dest - workers_root;
-  if (placement_row == last_first_row)
+  if (offset_row == last_first_row)
     down = NONE;
   else
     down = taskid + workers_root;
-  if (placement_column == 1)
+  if (offset_column == 1)
     left = NONE;
   else 
     left = taskid - 1;
-  if (placement_column == last_first_column)
+  if (offset_column == last_first_column)
     right = NONE;
   else
     right = dest+1;
 
-  printf("Started task %d: rows= %d offset= %d ",taskid, rows, placement_row);
+  printf("Started task %d: rows= %d offset= %d ",taskid, rows, offset_row);
   printf("up= %d down= %d left= %d right= %d\n", up, down, left, right);
 
 
