@@ -89,11 +89,15 @@ int main (int argc, char *argv[]) {
   /* Because of reordering the process id might have changed */
   MPI_Comm_rank(MPI_CART_COMM, &taskid);
 
+  /* Find up, down, left and right neighbors in the grid */
+  MPI_Cart_Shift(MPI_CART_COMM, 0, 1, &left, &right);
+  MPI_Cart_Shift(MPI_CART_COMM, 1, 1, &down, &up);
+
   /* Get the name of the physical node the process is running in */
   char p_name[MPI_MAX_PROCESSOR_NAME];
   int p_name_len;
   MPI_Get_processor_name(p_name, &p_name_len);
-  printf("Process #%d is running in processor: %s\n", taskid, p_name);
+  printf("Process #%d is running in processor: %s. up=%d, down=%d, left=%d, right=%d\n", taskid, p_name, up, down, left, right);
 
   MPI_Finalize(); //For debugging
   return 0; //For debugging
