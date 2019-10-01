@@ -65,6 +65,11 @@ int main (int argc, char *argv[]) {
   double workers_root;            /* square root of workers to divide the grid*/
   MPI_Status status;
   MPI_Datatype MPI_ROW, MPI_COLUMN; /* datatypes used for efficient data transfers between workers */
+  MPI_Comm MPI_CART_COMM
+  int cart_ndims = 2;
+  int cart_dims[2] = {0, 0};
+  int cart_periods[2] = {1, 1};
+  int cart_reorder = 1;
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -72,6 +77,26 @@ int main (int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
   numworkers = numtasks-1;
+
+  /* Create a cartesian topology for the processes */
+  MPI_Dims_create(numtasks, cart_ndims, cart_dims);
+  if(taskid == 0){
+    printf("Creating a cartesian topology of %d x %d dimensions", cart_dims[0], cart_dims[1]);
+  }
+  MPI_Cart_create(MPI_COMM_WORLD, cart_ndims, cart_dims, cart_periods, cart_reorder, &MPI_CART_COMM);
+  MPI_Barrier(MPI_CART_COMM);
+
+  /* Because of reordering the process id might have changed */
+  MPI_Comm_rank(MPI_CART_COMM, &taskid);
+
+  /* Get the name of the physical node the process is running in */
+  char p_name[MPI_MAX_PROCESSOR_NAME];
+  int p_name_len;
+  MPI_Get_processor_name(&p_name, &p_name_len);
+  printf("Process #%d is running in processor: %s", taskid, p_name);
+
+  MPI_Finalize(); //For debugging
+
 
   if (taskid == MASTER) {
     /******************************* master code ******************************/
