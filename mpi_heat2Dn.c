@@ -214,7 +214,7 @@ int main (int argc, char *argv[]) {
     MPI_Recv(&right, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
     MPI_Recv(&up, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
     MPI_Recv(&down, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-    MPI_Recv(&u[0][offset][0], rows*columns, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+    // MPI_Recv(&u[0][offset][0], rows*columns, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
 
     /* Determine border elements.  Need to consider first and last columns.
     *  Obviously, row 0 can't exchange with row 0-1.  Likewise, the last
@@ -277,9 +277,9 @@ int main (int argc, char *argv[]) {
     }
 
     /* Finally, send my portion of final results back to master */
-    MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
+    // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
-    MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
+    // MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
     MPI_Finalize();
    }
 }
