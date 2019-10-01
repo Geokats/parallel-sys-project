@@ -81,7 +81,7 @@ int main (int argc, char *argv[]) {
   /* Create a cartesian topology for the processes */
   MPI_Dims_create(numtasks, cart_ndims, cart_dims);
   if(taskid == 0){
-    printf("Creating a cartesian topology of %d x %d dimensions", cart_dims[0], cart_dims[1]);
+    printf("Creating a cartesian topology of %d x %d dimensions\n", cart_dims[0], cart_dims[1]);
   }
   MPI_Cart_create(MPI_COMM_WORLD, cart_ndims, cart_dims, cart_periods, cart_reorder, &MPI_CART_COMM);
   MPI_Barrier(MPI_CART_COMM);
@@ -93,9 +93,10 @@ int main (int argc, char *argv[]) {
   char p_name[MPI_MAX_PROCESSOR_NAME];
   int p_name_len;
   MPI_Get_processor_name(p_name, &p_name_len);
-  printf("Process #%d is running in processor: %s", taskid, p_name);
+  printf("Process #%d is running in processor: %s\n", taskid, p_name);
 
   MPI_Finalize(); //For debugging
+  return 0; //For debugging
 
 
   if (taskid == MASTER) {
