@@ -48,7 +48,7 @@ struct Parms {
 
 int main (int argc, char *argv[]) {
   void inidat(),prtdat(),update(),inidat2();
-  float  *u[2];    /* array for grid */
+  float **u[2];    /* array for grid */
   float *final_grid;              /* the final grid that gets printed*/
   int	taskid;                     /* this task's unique id */
   int numworkers;                 /* number of worker processes */
@@ -150,35 +150,6 @@ int main (int argc, char *argv[]) {
 
   inidat2(ave_row,ave_column,u[0]);
 
-  rows = (taskid <= extra_row) ? ave_row+1 : ave_row; /*den eimai sigouros akoma an douleuei swsta twra auto*/
-  columns = (taskid <= extra_column) ? ave_column+1 : ave_column;
-
-  /* Due to the way we split the grid (top to bottom,
-  *  left to right), the worker's neighbors' id to the
-  *  left and right are -1,+1 respectively, and its up and down
-  *  neighbors are -workers_root,+workers_roote. */
-
-  if (offset_row == 0)
-    up = NONE;
-  else
-    up = dest - workers_root;
-  if (offset_row == last_first_row)
-    down = NONE;
-  else
-    down = taskid + workers_root;
-  if (offset_column == 1)
-    left = NONE;
-  else
-    left = taskid - 1;
-  if (offset_column == last_first_column)
-    right = NONE;
-  else
-    right = dest+1;
-
-  printf("Started task %d: rows= %d offset= %d ",taskid, rows, offset_row);
-  printf("up= %d down= %d left= %d right= %d\n", up, down, left, right);
-
-
   /******************************* workers code *******************************/
   /* Initialize everything - including the borders - to zero */
   for (iz=0; iz<2; iz++)
@@ -272,8 +243,8 @@ int main (int argc, char *argv[]) {
       for (i=1; i<=numworkers; i++) {
         source = i;
         msgtype = DONE;
-        MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+        // MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+        // MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
         MPI_Recv(final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
       }
       /* Write final output, call X graph and finalize MPI */
