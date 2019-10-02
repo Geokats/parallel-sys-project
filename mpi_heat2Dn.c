@@ -67,6 +67,11 @@ int main (int argc, char *argv[]) {
   double workers_root;            /* square root of workers to divide the grid*/
   MPI_Status status;
   MPI_Datatype MPI_ROW, MPI_COLUMN; /* datatypes used for efficient data transfers between workers */
+  MPI_Comm MPI_CART_COMM;
+  int cart_ndims = 2;
+  int cart_dims[2] = {0, 0};
+  int cart_periods[2] = {0, 0};
+  int cart_reorder = 1;
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -74,6 +79,35 @@ int main (int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
   numworkers = numtasks-1;
+
+  /* Create a cartesian topology for the processes */
+  MPI_Dims_create(numtasks, cart_ndims, cart_dims);
+  if(taskid == 0){
+    printf("Creating a cartesian topology of %d x %d dimensions\n", cart_dims[0], cart_dims[1]);
+    printf("MPI_PROC_NULL == %d\n", MPI_PROC_NULL);
+  }
+  MPI_Cart_create(MPI_COMM_WORLD, cart_ndims, cart_dims, cart_periods, cart_reorder, &MPI_CART_COMM);
+  MPI_Barrier(MPI_CART_COMM);
+
+  /* Because of reordering the process id might have changed */
+  MPI_Comm_rank(MPI_CART_COMM, &taskid);
+
+  /* Find up, down, left and right neighbors in the grid */
+  MPI_Cart_shift(MPI_CART_COMM, 0, 1, &left, &right);
+  MPI_Cart_shift(MPI_CART_COMM, 1, 1, &down, &up);
+
+  /* Get the name of the physical node the process is running in */
+  char p_name[MPI_MAX_PROCESSOR_NAME];
+  int p_name_len;
+  MPI_Get_processor_name(p_name, &p_name_len);
+  printf("Process #%d is running in processor: %s. up=%d, down=%d, left=%d, right=%d\n", taskid, p_name, up, down, left, right);
+  int coord[2];
+  MPI_Cart_coords(MPI_CART_COMM, taskid, cart_ndims, coord);
+  printf("Process #%d is at coordinates (%d,%d) of the cartesian grid\n", taskid, coord[0], coord[1]);
+
+  MPI_Finalize(); //For debugging
+  return 0; //For debugging
+
 
   if (taskid == MASTER) {
     /******************************* master code ******************************/
@@ -224,9 +258,9 @@ int main (int argc, char *argv[]) {
   if (taskid!=MASTER)
   {
     /* Finally, send my portion of final results back to master */
-    MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
+    // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
-    MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
+    // MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
     MPI_Finalize();
 
     /* Free the allocated grid memory*/
