@@ -149,11 +149,7 @@ int main (int argc, char *argv[]) {
       u[z][i] = temp + i * (ave_column + 2);
     }
   }
-  //TODO: Add free for each malloc
   printf("Memory allocation finished in process #%d\n", taskid);
-
-
-  // inidat2(ave_row,ave_column,u[0]);
 
   /* Initialize everything - including the borders - to zero */
   for (iz=0; iz<2; iz++)
@@ -186,12 +182,11 @@ int main (int argc, char *argv[]) {
   *  the inside grid values, which require only already available information.
   *  After communication has been completed, update the outer values of the grid.*/
 
-  /* We store the halo rows in rows 0 and ave_row+1 (first and last),
+  /* We store the halo rows in rows 0 and rows+1 (first and last),
   *  and the columns respectively. Elements [0][0],[0][columns+1],
   *  [rows+1][0], [rows+1][columns+1], which are the corners
   *  of the extended grid, are never used*/
 
-  printf("Task %d received work. Beginning time steps...\n",taskid);
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
     if (left != NONE) {
@@ -264,6 +259,12 @@ int main (int argc, char *argv[]) {
       free(final_grid);
       MPI_Finalize();
       /* End of master code */
+  }
+
+  /* Free allocated memory */
+  for(z=0; z<2; z++){
+    free(u[z][0]);
+    free(u[z);
   }
 }
 
