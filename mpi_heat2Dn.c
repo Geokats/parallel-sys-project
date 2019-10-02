@@ -178,9 +178,12 @@ int main (int argc, char *argv[]) {
 
   printf("Task %d received work. Beginning time steps...\n",taskid);
   iz = 0;
+
+  MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[0]));
+
   for (it = 1; it <= STEPS; it++) {
     if (left != NONE) {
-      MPI_Irecv(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[0]));
+      MPI_Start(&r_array[0]);
       MPI_Isend(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[0]));
     }
     if (up != NONE) {
