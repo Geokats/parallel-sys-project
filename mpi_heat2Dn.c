@@ -48,28 +48,27 @@ struct Parms {
 
 int main (int argc, char *argv[]) {
   void inidat(),prtdat(),update(),inidat2();
-  float **u[2];    /* array for grid */
-  float **final_grid;              /* the final grid that gets printed*/
-  int	taskid;                     /* this task's unique id */
-	int numtasks;                   /* number of tasks */
-	int ave_row,rows,offset_row, /* for sending rows of data */
-  extra_row,last_first_row;
-  int ave_column,columns,offset_column,
-  extra_column,last_first_column; /* for sending columns of data*/
-	int dest, source;               /* to - from for message send-receive */
-	int left,right,up,down;         /* neighbor tasks */
-  int row_start, row_end;         /* worker's row borders */
-  int column_start, column_end;   /* worker's column borders */
-	int msgtype;                    /* for message types */
-	int rc;                         /* misc */
-	int i,j,ix,iy,iz,it;            /* loop variables */
+  float **u[2];                           /* array for grid */
+  float **final_grid;                     /* the final grid that gets printed*/
+  int	taskid;                             /* this task's unique id */
+	int numtasks;                           /* number of tasks */
+	int ave_row,rows,extra_row;             /* for sending rows of data */
+  int ave_column,columns,extra_column;    /* for sending columns of data*/
+	int dest, source;                       /* to - from for message send-receive */
+	int left,right,up,down;                 /* neighbor tasks */
+	int msgtype;                            /* for message types */
+	int rc;                                 /* misc */
+	int i,j,ix,iy,iz,it;                    /* loop variables */
   MPI_Status status;
-  MPI_Datatype MPI_ROW, MPI_COLUMN; /* datatypes used for efficient data transfers between workers */
-  MPI_Comm MPI_CART_COMM;
-  int cart_ndims = 2;
-  int cart_dims[2] = {0, 0};
-  int cart_periods[2] = {0, 0};
-  int cart_reorder = 1;
+  MPI_Datatype MPI_ROW, MPI_COLUMN;       /* datatypes used for efficient data transfers between workers */
+  MPI_Comm MPI_CART_COMM;                 /* Cartesian Communication World */
+  int cart_ndims = 2;                     /* Number of dimensions of cartesian grid */
+  int cart_dims[2] = {0, 0};              /* Size of each dimension in the cartesian grid */
+  int cart_periods[2] = {0, 0};           /* Period of each dimension in the cartesian grid */
+  int cart_reorder = 1;                   /* Node reorder option during cartesian grid construction */
+  int coord[2];                           /* Process coordinates in the cartesian grid */
+  char p_name[MPI_MAX_PROCESSOR_NAME];    /* Name of the processor the process is running on */
+  int p_name_len;                         /* Processor name length */
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -109,12 +108,10 @@ int main (int argc, char *argv[]) {
   MPI_Cart_shift(MPI_CART_COMM, 1, 1, &down, &up);
 
   /* Get the name of the physical node the process is running in */
-  char p_name[MPI_MAX_PROCESSOR_NAME];
-  int p_name_len;
   MPI_Get_processor_name(p_name, &p_name_len);
   printf("Process #%d is running in processor: %s. up=%d, down=%d, left=%d, right=%d\n", taskid, p_name, up, down, left, right);
   /*Get the coordinates of the process in the cartesian process grid */
-  int coord[2];
+
   MPI_Cart_coords(MPI_CART_COMM, taskid, cart_ndims, coord);
   printf("Process #%d is at coordinates (%d,%d) of the cartesian grid\n", taskid, coord[0], coord[1]);
 
@@ -215,7 +212,7 @@ int main (int argc, char *argv[]) {
         msgtype = DONE;
         // MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
         // MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(&final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+        // MPI_Recv(&final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
       }
       /* Write final output, call X graph and finalize MPI */
       printf("Writing final.dat file and generating graph...\n");
