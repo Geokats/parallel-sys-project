@@ -143,10 +143,10 @@ int main (int argc, char *argv[]) {
   * pointers for each row that point to this memory. */
 
   for(z=0; z<2; z++){
-    temp = malloc((ave_row+2) * (ave_column+2) * sizeof(float));
-    u[z] = malloc((ave_row+2) * sizeof(float**));
-    for(i=0; i<ave_row+2; i++){
-      u[z][i] = temp + i * (ave_column + 2);
+    temp = malloc((rows+2) * (columns+2) * sizeof(float));
+    u[z] = malloc((rows+2) * sizeof(float*));
+    for(i=0; i<rows+2; i++){
+      u[z][i] = &(temp[i * (columns + 2)]);
     }
   }
   printf("Memory allocation finished in process #%d\n", taskid);
@@ -159,9 +159,9 @@ int main (int argc, char *argv[]) {
 
   prtfdat(rows+2, columns+2, u[0]);
 
-  inidat(rows+2, columns+2, u[0]);
+  //inidat(rows+2, columns+2, u[0]);
 
-  prtfdat(rows+2, columns+2, u[0]);
+  //prtfdat(rows+2, columns+2, u[0]);
 
   /* Create row and column datatypes. This way we can efficiently send a column
   * from the table without having to copy it to a buffer. More specifically:
