@@ -233,20 +233,20 @@ int main (int argc, char *argv[]) {
   }
 
   if (left!=NONE){
-    MPI_Request_free(&(r_array[0]))
-    MPI_Request_free(&(s_array[0]))
+    MPI_Request_free(&(r_array[0]));
+    MPI_Request_free(&(s_array[0]));
   }
   if (up!=NONE){
-    MPI_Request_free(&(r_array[1]))
-    MPI_Request_free(&(s_array[1]))
+    MPI_Request_free(&(r_array[1]));
+    MPI_Request_free(&(s_array[1]));
   }
   if (right!=NONE){
-    MPI_Request_free(&(r_array[2]))
-    MPI_Request_free(&(s_array[2]))
+    MPI_Request_free(&(r_array[2]));
+    MPI_Request_free(&(s_array[2]));
   }
   if (down!=NONE){
-    MPI_Request_free(&(r_array[3]))
-    MPI_Request_free(&(s_array[3]))
+    MPI_Request_free(&(r_array[3]));
+    MPI_Request_free(&(s_array[3]));
   }
 
   time2 = MPI_Wtime();
