@@ -142,14 +142,15 @@ int main (int argc, char *argv[]) {
   * achieve this we malloc all the memory needed at start and then create
   * pointers for each row that point to this memory. */
 
-  for(z=0; z<2; i++){
+  for(z=0; z<2; z++){
     temp = malloc((ave_row+2) * (ave_column+2) * sizeof(float));
-    u[z] = malloc((ave_row+2) * sizeof(float*));
+    u[z] = malloc((ave_row+2) * sizeof(float**));
     for(i=0; i<ave_row+2; i++){
       u[z][i] = temp + i * (ave_column + 2);
     }
   }
   //TODO: Add free for each malloc
+  printf("Memory allocation finished in process #%d\n", taskid);
 
 
   inidat2(ave_row,ave_column,u[0]);
