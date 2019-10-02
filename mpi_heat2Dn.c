@@ -59,7 +59,7 @@ int main (int argc, char *argv[]) {
 	int left,right,up,down;                 /* neighbor tasks */
 	int msgtype;                            /* for message types */
 	int rc;                                 /* misc */
-	int i,j,ix,iy,iz,it;                    /* loop variables */
+	int i,j,z,ix,iy,iz,it;                  /* loop variables */
   MPI_Status status;
   MPI_Datatype MPI_ROW, MPI_COLUMN;       /* datatypes used for efficient data transfers between workers */
   MPI_Comm MPI_CART_COMM;                 /* Cartesian Communication World */
@@ -172,6 +172,7 @@ int main (int argc, char *argv[]) {
   MPI_Type_vector(rows, 1, rows, MPI_DOUBLE , &MPI_COLUMN);
   MPI_Type_commit(&MPI_ROW);
   MPI_Type_commit(&MPI_COLUMN);
+  //TODO: Do these need to be freed(?) somehow?
 
   /* Begin doing STEPS iterations.  Must communicate border rows with
   *  neighbors.  If I have the first  or last grid row, then I only need
