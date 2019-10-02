@@ -272,7 +272,7 @@ int main (int argc, char *argv[]) {
     update(row_start,row_end,column_end,column_end,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
 
     /* Wait for the sends to be over */
-    MPI_Waitall(4,s_array,MPI_STATUSES_IGNORE)
+    MPI_Waitall(4,s_array,MPI_STATUSES_IGNORE);
 
 
     iz = 1 - iz;
