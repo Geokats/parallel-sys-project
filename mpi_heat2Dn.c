@@ -197,7 +197,6 @@ int main (int argc, char *argv[]) {
     MPI_Send_init(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
   }
 
-
   for (it = 1; it <= STEPS; it++) {
     if (left != NONE) {
       MPI_Start(&r_array[0]);
@@ -256,9 +255,9 @@ int main (int argc, char *argv[]) {
   /* Final data printing */
   if (taskid!=MASTER){
     /* Finally, send my portion of final results back to master */
-    // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
-    //MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
-    // MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
+    MPI_Send(&columns, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
+    MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
+    MPI_Send(&u[iz][0][0], (rows+2), MPI_ROW, MASTER, DONE, MPI_COMM_WORLD);
     MPI_Finalize();
 
     /* Free the allocated grid memory*/
@@ -272,7 +271,7 @@ int main (int argc, char *argv[]) {
         final_grid = malloc((NXPROB*NYPROB)*sizeof(float*));
       }
       /* Now wait for results from all worker tasks */
-      for (i=1; i<=numtasks; i++) {
+      for (i=1; i<numtasks; i++) {
         source = i;
         msgtype = DONE;
         // MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
