@@ -153,15 +153,19 @@ int main (int argc, char *argv[]) {
   printf("Memory allocation finished in process #%d\n", taskid);
 
 
-  inidat2(ave_row,ave_column,u[0]);
-
-  prtfdat(rows+2, columns+2, u[0]);
+  // inidat2(ave_row,ave_column,u[0]);
 
   /* Initialize everything - including the borders - to zero */
   for (iz=0; iz<2; iz++)
-    for (ix=0; ix<NXPROB; ix++)
-      for (iy=0; iy<NYPROB; iy++)
+    for (ix=0; ix<rows+2; ix++)
+      for (iy=0; iy<columns+2; iy++)
         u[iz][ix][iy] = 0.0;
+
+  prtfdat(rows+2, columns+2, u[0]);
+
+  inidat(rows+2, columns+2, u[0]);
+
+  prtfdat(rows+2, columns+2, u[0]);
 
   /* Create row and column datatypes. This way we can efficiently send a column
   * from the table without having to copy it to a buffer. More specifically:
