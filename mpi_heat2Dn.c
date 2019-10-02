@@ -51,7 +51,6 @@ int main (int argc, char *argv[]) {
   float **u[2];    /* array for grid */
   float **final_grid;              /* the final grid that gets printed*/
   int	taskid;                     /* this task's unique id */
-  int numworkers;                 /* number of worker processes */
 	int numtasks;                   /* number of tasks */
 	int ave_row,rows,offset_row, /* for sending rows of data */
   extra_row,last_first_row;
@@ -77,18 +76,16 @@ int main (int argc, char *argv[]) {
   MPI_Init(&argc,&argv);
   MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
-  numworkers = numtasks-1;
 
   if (taskid == 0) {
-    /* Check if numworkers is within range - quit if not */
-    if ((numworkers > MAXWORKER) || (numworkers < MINWORKER)) {
+    /* Check if numtasks is within range - quit if not */
+    if ((numtasks > MAXWORKER) || (numtasks < MINWORKER)) {
       printf("ERROR: the number of tasks must be between %d and %d.\n", MINWORKER+1, MAXWORKER+1);
       printf("Quitting...\n");
       MPI_Abort(MPI_COMM_WORLD, rc);
       exit(1);
     }
-    printf ("Starting mpi_heat2D with %d worker tasks.\n", numworkers);
-
+    printf ("Starting mpi_heat2D with %d worker tasks.\n", numtasks);
 
     printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
     printf("Initializing grid and writing initial.dat file...\n");
@@ -240,7 +237,7 @@ int main (int argc, char *argv[]) {
         final_grid = malloc((NXPROB*NYPROB)*sizeof(float*));
       }
       /* Now wait for results from all worker tasks */
-      for (i=1; i<=numworkers; i++) {
+      for (i=1; i<=numtasks; i++) {
         source = i;
         msgtype = DONE;
         // MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
