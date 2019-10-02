@@ -264,7 +264,7 @@ int main (int argc, char *argv[]) {
   /* Free allocated memory */
   for(z=0; z<2; z++){
     free(u[z][0]);
-    free(u[z);
+    free(u[z]);
   }
 }
 
