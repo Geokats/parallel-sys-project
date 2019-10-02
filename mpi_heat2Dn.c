@@ -68,7 +68,7 @@ int main (int argc, char *argv[]) {
   MPI_Comm MPI_CART_COMM;
   int cart_ndims = 2;
   int cart_dims[2] = {0, 0};
-  int cart_periods[2] = {1, 1};
+  int cart_periods[2] = {0, 0};
   int cart_reorder = 1;
 
 
@@ -82,6 +82,7 @@ int main (int argc, char *argv[]) {
   MPI_Dims_create(numtasks, cart_ndims, cart_dims);
   if(taskid == 0){
     printf("Creating a cartesian topology of %d x %d dimensions\n", cart_dims[0], cart_dims[1]);
+    printf("MPI_PROC_NULL == %d\n", MPI_PROC_NULL);
   }
   MPI_Cart_create(MPI_COMM_WORLD, cart_ndims, cart_dims, cart_periods, cart_reorder, &MPI_CART_COMM);
   MPI_Barrier(MPI_CART_COMM);
