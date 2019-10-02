@@ -64,7 +64,6 @@ int main (int argc, char *argv[]) {
 	int msgtype;                    /* for message types */
 	int rc;                         /* misc */
 	int i,j,ix,iy,iz,it;            /* loop variables */
-  double workers_root;            /* square root of workers to divide the grid*/
   MPI_Status status;
   MPI_Datatype MPI_ROW, MPI_COLUMN; /* datatypes used for efficient data transfers between workers */
   MPI_Comm MPI_CART_COMM;
@@ -79,6 +78,22 @@ int main (int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
   numworkers = numtasks-1;
+
+  if (taskid == 0) {
+    /* Check if numworkers is within range - quit if not */
+    if ((numworkers > MAXWORKER) || (numworkers < MINWORKER)) {
+      printf("ERROR: the number of tasks must be between %d and %d.\n", MINWORKER+1, MAXWORKER+1);
+      printf("Quitting...\n");
+      MPI_Abort(MPI_COMM_WORLD, rc);
+      exit(1);
+    }
+    printf ("Starting mpi_heat2D with %d worker tasks.\n", numworkers);
+
+
+    printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
+    printf("Initializing grid and writing initial.dat file...\n");
+
+  }
 
   /* Create a cartesian topology for the processes */
   MPI_Dims_create(numtasks, cart_ndims, cart_dims);
@@ -101,55 +116,35 @@ int main (int argc, char *argv[]) {
   int p_name_len;
   MPI_Get_processor_name(p_name, &p_name_len);
   printf("Process #%d is running in processor: %s. up=%d, down=%d, left=%d, right=%d\n", taskid, p_name, up, down, left, right);
+  /*Get the coordinates of the process in the cartesian process grid */
   int coord[2];
   MPI_Cart_coords(MPI_CART_COMM, taskid, cart_ndims, coord);
   printf("Process #%d is at coordinates (%d,%d) of the cartesian grid\n", taskid, coord[0], coord[1]);
+
+  /* The Cartesian Topology provides an efficient way to split the grid based on
+  * the topology grid. We only have to find the size of each worker's grid so
+  * that all the wokrers' grid combined are equal to the initial grid's size. */
+
+  ave_row = NXPROB/cart_dims[0];
+  extra_row = NXPROB%cart_dims[0];
+  rows = (coord[0] == cart_dims[0] - 1) ? ave_row + extra_row : ave_row;
+
+  ave_column = NYPROB/cart_dims[1];
+  extra_column = NYPROB%cart_dims[1];
+  columns = (coord[0] == cart_dims[0] - 1) ? ave_column + extra_column : ave_column;
+
+  printf("Process #%d gets a %d x %d grid\n", taskid, rows, columns);
 
   MPI_Finalize(); //For debugging
   return 0; //For debugging
 
 
-  if (taskid == MASTER) {
-    /******************************* master code ******************************/
-    /* Check if numworkers is within range - quit if not */
-    if ((numworkers > MAXWORKER) || (numworkers < MINWORKER)) {
-      printf("ERROR: the number of tasks must be between %d and %d.\n", MINWORKER+1, MAXWORKER+1);
-      printf("Quitting...\n");
-      MPI_Abort(MPI_COMM_WORLD, rc);
-      exit(1);
-    }
-    printf ("Starting mpi_heat2D with %d worker tasks.\n", numworkers);
 
-    
-    printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
-    printf("Initializing grid and writing initial.dat file...\n");
-
-  }
 
   /* to prwto print, prepei na doume pws tha ginetai
   *  prtdat(NXPROB, NYPROB, u, "initial.dat");*/
 
-  /* Distribute work to workers.  Must first figure out how many rows to
-  *  send and what to do with extra rows. */
-
-  workers_root = sqrt(numworkers);
-
-  /* Calculate the size of your grid, starting with the rows.
-  *  Also find which part of the whole(grid-wise) this task is.
-  *  Offset is the place where the first row/column would fit
-  *  in the big grid.Find the first row of the last task.*/
-  ave_row = NXPROB/(int)workers_root;
-  extra_row = NXPROB%(int)workers_root;
-  offset_row = taskid/(int)workers_root * ave_row;
-  last_first_row = NXPROB-ave_row-1;
-
-  /*Same treatment for columns. */
-  ave_column = NYPROB/(int)numworkers;
-  extra_column = NYPROB%(int)numworkers;
-  offset_column = taskid%(int)workers_root * ave_column;
-  last_first_column = NYPROB-ave_column-1;
-
-  /*Allocate grid memory and initialize it*/  
+  /*Allocate grid memory and initialize it*/
   for(i=0;i<2;i++)
     u[i] = malloc((ave_row+2)*(ave_column+2)*sizeof(float*));
 
@@ -159,8 +154,8 @@ int main (int argc, char *argv[]) {
   columns = (taskid <= extra_column) ? ave_column+1 : ave_column;
 
   /* Due to the way we split the grid (top to bottom,
-  *  left to right), the worker's neighbors' id to the 
-  *  left and right are -1,+1 respectively, and its up and down 
+  *  left to right), the worker's neighbors' id to the
+  *  left and right are -1,+1 respectively, and its up and down
   *  neighbors are -workers_root,+workers_roote. */
 
   if (offset_row == 0)
@@ -173,7 +168,7 @@ int main (int argc, char *argv[]) {
     down = taskid + workers_root;
   if (offset_column == 1)
     left = NONE;
-  else 
+  else
     left = taskid - 1;
   if (offset_column == last_first_column)
     right = NONE;
