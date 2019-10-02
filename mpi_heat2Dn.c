@@ -179,6 +179,7 @@ int main (int argc, char *argv[]) {
   printf("Task %d received work. Beginning time steps...\n",taskid);
   iz = 0;
 
+  /* Create persistent communication requests for each neighbor */
   if (left!=NONE){
     MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[0]));
     MPI_Send_init(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[0]));
@@ -232,6 +233,7 @@ int main (int argc, char *argv[]) {
     iz = 1 - iz;
   }
 
+  /* Free the requests allocated*/
   if (left!=NONE){
     MPI_Request_free(&(r_array[0]));
     MPI_Request_free(&(s_array[0]));
