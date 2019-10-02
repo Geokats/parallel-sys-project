@@ -245,7 +245,7 @@ int main (int argc, char *argv[]) {
         msgtype = DONE;
         // MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
         // MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
       }
       /* Write final output, call X graph and finalize MPI */
       printf("Writing final.dat file and generating graph...\n");
