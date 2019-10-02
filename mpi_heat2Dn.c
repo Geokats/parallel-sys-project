@@ -143,10 +143,10 @@ int main (int argc, char *argv[]) {
   * pointers for each row that point to this memory. */
 
   for(z=0; z<2; z++){
-    temp = malloc((rows+2) * (columns+2) * sizeof(float));
-    u[z] = malloc((rows+2) * sizeof(float*));
+    u[z] = (float**) malloc((rows+2) * sizeof(float*));
+    temp = (float*) malloc((rows+2) * (columns+2) * sizeof(float));
     for(i=0; i<rows+2; i++){
-      u[z][i] = &(temp[i * (columns + 2)]);
+      u[z][i] = (float*) &(temp[i * (columns + 2)]);
     }
   }
   printf("Memory allocation finished in process #%d\n", taskid);
@@ -158,6 +158,9 @@ int main (int argc, char *argv[]) {
         u[iz][ix][iy] = 0.0;
 
   prtfdat(rows+2, columns+2, u[0]);
+  
+  MPI_Finalize(); //for debugging
+  return 0;
 
   //inidat(rows+2, columns+2, u[0]);
 
@@ -336,7 +339,7 @@ void prtdat(int nx, int ny, float *u1, char *fnam) {
 void prtfdat(int nx, int ny, float *u1) {
   int ix, iy;
 
-  for (iy = ny-1; iy >= 0; iy--) {
+  for (iy = 0; iy <= ny-1; iy++) {
     for (ix = 0; ix <= nx-1; ix++) {
       printf("%6.1f", *(u1+ix*ny+iy));
       if (ix != nx-1)
