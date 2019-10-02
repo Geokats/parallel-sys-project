@@ -50,6 +50,7 @@ int main (int argc, char *argv[]) {
   void inidat(),prtdat(),prtfdat(),update(),inidat2();
   float **u[2];                           /* array for grid */
   float **final_grid;                     /* the final grid that gets printed*/
+  float *temp;                            /* for temporarily storing malloc-ed memory */
   int	taskid;                             /* this task's unique id */
 	int numtasks;                           /* number of tasks */
 	int ave_row,rows,extra_row;             /* for sending rows of data */
@@ -134,10 +135,22 @@ int main (int argc, char *argv[]) {
   /* to prwto print, prepei na doume pws tha ginetai
   *  prtdat(NXPROB, NYPROB, u, "initial.dat");*/
 
-  /*Allocate grid memory and initialize it*/
-  //TODO: Fix this
-  for(i=0;i<2;i++)
-    u[i] = malloc((ave_row+2)*(ave_column+2)*sizeof(float*));
+  /* Allocate grid memory for this process:
+  * It is very important that the memory we allocate for this grid is consistent
+  * (i.e. in consecutive memory addresses) otherwise our custom MPI_Datatypes
+  * for rows and more specifically for columns will not work properly. To
+  * achieve this we malloc all the memory needed at start and then create
+  * pointers for each row that point to this memory. */
+
+  for(z=0; z<2; i++){
+    temp = malloc((ave_row+2) * (ave_column+2) * sizeof(float));
+    u[z] = malloc((ave_row+2) * sizeof(float*));
+    for(i=0; i<ave_row+2; i++){
+      u[z][i] = temp + i * (ave_column + 2);
+    }
+  }
+  //TODO: Add free for each malloc
+
 
   inidat2(ave_row,ave_column,u[0]);
 
