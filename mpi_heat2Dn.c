@@ -130,18 +130,13 @@ int main (int argc, char *argv[]) {
   extra_column = NYPROB%cart_dims[1];
   columns = (coord[0] == cart_dims[0] - 1) ? ave_column + extra_column : ave_column;
 
-  printf("Process #%d gets a %d x %d grid\n", taskid, rows, columns);
-
-  MPI_Finalize(); //For debugging
-  return 0; //For debugging
-
-
-
+  printf("Process #%d gets a %d x %d grid (%d x %d including the halo)\n", taskid, rows, columns, rows+2, columns+2);
 
   /* to prwto print, prepei na doume pws tha ginetai
   *  prtdat(NXPROB, NYPROB, u, "initial.dat");*/
 
   /*Allocate grid memory and initialize it*/
+  //TODO: Fix this
   for(i=0;i<2;i++)
     u[i] = malloc((ave_row+2)*(ave_column+2)*sizeof(float*));
 
@@ -153,28 +148,6 @@ int main (int argc, char *argv[]) {
     for (ix=0; ix<NXPROB; ix++)
       for (iy=0; iy<NYPROB; iy++)
         u[iz][ix][iy] = 0.0;
-
-  /* Determine border elements.  Need to consider first and last columns.
-  *  Obviously, row 0 can't exchange with row 0-1.  Likewise, the last
-  *  row can't exchange with last+1. */
-  if (offset_row == 0)
-    row_start = 1;
-  else
-    row_start = offset_row;
-  if ((offset_row+rows) == NXPROB)
-    row_end = row_start+rows-2;
-  else
-    row_end = row_start+rows-1;
-
-  /*  Τhe same goes for columns. */
-  if (offset_column == 0)
-    column_start = 1;
-  else
-    column_start = offset_column;
-  if ((offset_column+columns) == NYPROB)
-    column_end = column_start+columns-2;
-  else
-    column_end = column_start+columns-1;
 
   /* Create row and column datatypes. This way we can efficiently send a column
   * from the table without having to copy it to a buffer. More specifically:
