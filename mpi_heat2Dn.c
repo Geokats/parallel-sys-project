@@ -49,7 +49,7 @@ struct Parms {
 int main (int argc, char *argv[]) {
   void inidat(),prtdat(),update(),inidat2();
   float **u[2];    /* array for grid */
-  float *final_grid;              /* the final grid that gets printed*/
+  float **final_grid;              /* the final grid that gets printed*/
   int	taskid;                     /* this task's unique id */
   int numworkers;                 /* number of worker processes */
 	int numtasks;                   /* number of tasks */
