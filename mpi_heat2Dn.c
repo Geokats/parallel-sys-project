@@ -141,6 +141,8 @@ int main (int argc, char *argv[]) {
 
   inidat2(ave_row,ave_column,u[0]);
 
+  prtfdat(rows+2, columns+2, u[0]);
+
   /* Initialize everything - including the borders - to zero */
   for (iz=0; iz<2; iz++)
     for (ix=0; ix<NXPROB; ix++)
@@ -308,4 +310,19 @@ void prtdat(int nx, int ny, float *u1, char *fnam) {
     }
   }
   fclose(fp);
+}
+
+/****************************** subroutine prtfdat *****************************/
+void prtfdat(int nx, int ny, float *u1) {
+  int ix, iy;
+
+  for (iy = ny-1; iy >= 0; iy--) {
+    for (ix = 0; ix <= nx-1; ix++) {
+      printf("%6.1f", *(u1+ix*ny+iy));
+      if (ix != nx-1)
+        printf(" ");
+      else
+        printf("\n");
+    }
+  }
 }
