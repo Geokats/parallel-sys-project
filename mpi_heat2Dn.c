@@ -57,6 +57,7 @@ int main (int argc, char *argv[]) {
   extra_row,last_first_row;
   int ave_column,columns,offset_column,
   extra_column,last_first_column; /* for sending columns of data*/
+  int offset;
 	int dest, source;               /* to - from for message send-receive */
 	int left,right,up,down;         /* neighbor tasks */
   int row_start, row_end;         /* worker's row borders */
@@ -247,16 +248,16 @@ int main (int argc, char *argv[]) {
       MPI_Isend(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[0]));
     }
     if (up != NONE) {
-      MPI_Recv(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[1]));
-      MPI_Send(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[1]));
+      MPI_Irecv(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[1]));
+      MPI_Isend(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[1]));
     }
     if (right != NONE) {
-      MPI_Recv(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[2]));
-      MPI_Send(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2]));
+      MPI_Irecv(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[2]));
+      MPI_Isend(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2]));
     }
     if (down != NONE) {
-      MPI_Recv(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[3]));
-      MPI_Send(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
+      MPI_Irecv(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[3]));
+      MPI_Isend(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
     }
     /* Now call update to update the value of inner grid points */
     update(row_start+1, row_end-1, column_start+1, column_end-1, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
