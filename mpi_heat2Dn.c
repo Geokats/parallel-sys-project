@@ -22,7 +22,7 @@
 *   to MPI: George L. Gusciora (1/95)
 * LAST REVISED: 04/02/05
 *******************************************************************************/
-/*#include "mpi.h"*/
+#include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -48,7 +48,7 @@ struct Parms {
 
 int main (int argc, char *argv[]) {
   void inidat(),prtdat(),update(),inidat2();
-  float  *u[2];    /* array for grid */
+  float  **u[2];    /* array for grid */
   float *final_grid;              /* the final grid that gets printed*/
   int	taskid;                     /* this task's unique id */
   int numworkers;                 /* number of worker processes */
@@ -72,6 +72,9 @@ int main (int argc, char *argv[]) {
   int cart_dims[2] = {0, 0};
   int cart_periods[2] = {0, 0};
   int cart_reorder = 1;
+  MPI_Request r_array[4]; /* Handles for receiving information */
+  MPI_Request s_array[4]; /* Handles for sending information */
+
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -226,32 +229,51 @@ int main (int argc, char *argv[]) {
 
   /* Begin doing STEPS iterations.  Must communicate border rows with
   *  neighbors.  If I have the first  or last grid row, then I only need
-  *  to  communicate with one neighbor */
+  *  to  communicate with one neighbor. I get ready to receive first, then
+  *  send my own information. While communication is ongoing, calculate
+  *  the inside grid values, which require only already available information.
+  *  After communication has been completed, update the outer values of the grid.*/
+
   /* We store the halo rows in rows 0 and ave_row+1 (first and last),
   *  and the columns respectively. Elements [0][0],[0][columns+1],
   *  [rows+1][0], [rows+1][columns+1], which are the corners
   *  of the extended grid, are never used*/
+
   printf("Task %d received work. Beginning time steps...\n",taskid);
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
     if (left != NONE) {
-      MPI_Send(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD);
-      MPI_Recv(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &status);
+      MPI_Irecv(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[0]));
+      MPI_Isend(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[0]));
     }
     if (up != NONE) {
-      MPI_Send(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD);
-      MPI_Recv(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &status);
+      MPI_Recv(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[1]));
+      MPI_Send(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[1]));
     }
     if (right != NONE) {
-      MPI_Send(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD);
-      MPI_Recv(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &status);
+      MPI_Recv(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[2]));
+      MPI_Send(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2]));
     }
     if (down != NONE) {
-      MPI_Send(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD);
-      MPI_Recv(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &status);
+      MPI_Recv(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[3]));
+      MPI_Send(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
     }
-    /* Now call update to update the value of grid points */
-    update(row_start, row_end, column_start, column_end, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
+    /* Now call update to update the value of inner grid points */
+    update(row_start+1, row_end-1, column_start+1, column_end-1, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
+
+    /* Wait for the receives to be over */
+    MPI_Waitall(4,r_array,MPI_STATUSES_IGNORE);
+
+    /* Update the outer values, based on the halos we have by now received*/
+    update(row_start,row_start,column_start,column_end,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
+    update(row_end,row_end,column_start,column_end,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
+    update(row_start,row_end,column_start,column_start,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
+    update(row_start,row_end,column_end,column_end,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
+
+    /* Wait for the sends to be over */
+    MPI_Waitall(4,s_array,MPI_STATUSES_IGNORE)
+
+
     iz = 1 - iz;
   }
 
@@ -279,7 +301,7 @@ int main (int argc, char *argv[]) {
         msgtype = DONE;
         MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
         MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
       }
       /* Write final output, call X graph and finalize MPI */
       printf("Writing final.dat file and generating graph...\n");
