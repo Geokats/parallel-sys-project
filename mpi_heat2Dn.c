@@ -142,7 +142,6 @@ int main (int argc, char *argv[]) {
 
   inidat2(ave_row,ave_column,u[0]);
 
-  /******************************* workers code *******************************/
   /* Initialize everything - including the borders - to zero */
   for (iz=0; iz<2; iz++)
     for (ix=0; ix<NXPROB; ix++)
@@ -187,10 +186,11 @@ int main (int argc, char *argv[]) {
       MPI_Recv(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &status);
     }
     /* Now call update to update the value of grid points */
-    update(row_start, row_end, column_start, column_end, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
+    update(1, rows, 1, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
     iz = 1 - iz;
   }
 
+  /* Final data printing */
   if (taskid!=MASTER)
   {
     /* Finally, send my portion of final results back to master */
