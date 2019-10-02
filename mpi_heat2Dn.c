@@ -99,6 +99,9 @@ int main (int argc, char *argv[]) {
   int p_name_len;
   MPI_Get_processor_name(p_name, &p_name_len);
   printf("Process #%d is running in processor: %s. up=%d, down=%d, left=%d, right=%d\n", taskid, p_name, up, down, left, right);
+  int coord[2];
+  MPI_Cart_coords(MPI_CART_COMM, taskid, cart_ndims, coord);
+  printf("Process #%d is at coordinates (%d,%d) of the cartesian grid\n", taskid, coord[0], coord[1]);
 
   MPI_Finalize(); //For debugging
   return 0; //For debugging
