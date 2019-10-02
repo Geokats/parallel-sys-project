@@ -48,41 +48,50 @@ struct Parms {
 
 int main (int argc, char *argv[]) {
   void inidat(),prtdat(),update(),inidat2();
-  float  **u[2];    /* array for grid */
-  float *final_grid;              /* the final grid that gets printed*/
-  int	taskid;                     /* this task's unique id */
-  int numworkers;                 /* number of worker processes */
-	int numtasks;                   /* number of tasks */
-	int ave_row,rows,offset_row, /* for sending rows of data */
-  extra_row,last_first_row;
-  int ave_column,columns,offset_column,
-  extra_column,last_first_column; /* for sending columns of data*/
-  int offset;
-	int dest, source;               /* to - from for message send-receive */
-	int left,right,up,down;         /* neighbor tasks */
-  int row_start, row_end;         /* worker's row borders */
-  int column_start, column_end;   /* worker's column borders */
-	int msgtype;                    /* for message types */
-	int rc;                         /* misc */
-	int i,j,ix,iy,iz,it;            /* loop variables */
-  double workers_root;            /* square root of workers to divide the grid*/
+  float **u[2];                           /* array for grid */
+  float **final_grid;                     /* the final grid that gets printed*/
+  int	taskid;                             /* this task's unique id */
+	int numtasks;                           /* number of tasks */
+	int ave_row,rows,extra_row;             /* for sending rows of data */
+  int ave_column,columns,extra_column;    /* for sending columns of data*/
+	int dest, source;                       /* to - from for message send-receive */
+	int left,right,up,down;                 /* neighbor tasks */
+	int msgtype;                            /* for message types */
+	int rc;                                 /* misc */
+	int i,j,ix,iy,iz,it;                    /* loop variables */
   MPI_Status status;
-  MPI_Datatype MPI_ROW, MPI_COLUMN; /* datatypes used for efficient data transfers between workers */
-  MPI_Comm MPI_CART_COMM;
-  int cart_ndims = 2;
-  int cart_dims[2] = {0, 0};
-  int cart_periods[2] = {0, 0};
-  int cart_reorder = 1;
-  MPI_Request r_array[4]; /* Handles for receiving information */
-  MPI_Request s_array[4]; /* Handles for sending information */
-
+  MPI_Datatype MPI_ROW, MPI_COLUMN;       /* datatypes used for efficient data transfers between workers */
+  MPI_Comm MPI_CART_COMM;                 /* Cartesian Communication World */
+  int cart_ndims = 2;                     /* Number of dimensions of cartesian grid */
+  int cart_dims[2] = {0, 0};              /* Size of each dimension in the cartesian grid */
+  int cart_periods[2] = {0, 0};           /* Period of each dimension in the cartesian grid */
+  int cart_reorder = 1;                   /* Node reorder option during cartesian grid construction */
+  int coord[2];                           /* Process coordinates in the cartesian grid */
+  char p_name[MPI_MAX_PROCESSOR_NAME];    /* Name of the processor the process is running on */
+  int p_name_len;                         /* Processor name length */
+  MPI_Request r_array[4];                 /* Handles for receiving information */
+  MPI_Request s_array[4];                 /* Handles for sending information */
 
 
   /* First, find out my taskid and how many tasks are running */
   MPI_Init(&argc,&argv);
   MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
-  numworkers = numtasks-1;
+
+  if (taskid == 0) {
+    /* Check if numtasks is within range - quit if not */
+    if ((numtasks > MAXWORKER) || (numtasks < MINWORKER)) {
+      printf("ERROR: the number of tasks must be between %d and %d.\n", MINWORKER+1, MAXWORKER+1);
+      printf("Quitting...\n");
+      MPI_Abort(MPI_COMM_WORLD, rc);
+      exit(1);
+    }
+    printf ("Starting mpi_heat2D with %d worker tasks.\n", numtasks);
+
+    printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
+    printf("Initializing grid and writing initial.dat file...\n");
+
+  }
 
   /* Create a cartesian topology for the processes */
   MPI_Dims_create(numtasks, cart_ndims, cart_dims);
@@ -101,121 +110,42 @@ int main (int argc, char *argv[]) {
   MPI_Cart_shift(MPI_CART_COMM, 1, 1, &down, &up);
 
   /* Get the name of the physical node the process is running in */
-  char p_name[MPI_MAX_PROCESSOR_NAME];
-  int p_name_len;
   MPI_Get_processor_name(p_name, &p_name_len);
   printf("Process #%d is running in processor: %s. up=%d, down=%d, left=%d, right=%d\n", taskid, p_name, up, down, left, right);
-  int coord[2];
+  /*Get the coordinates of the process in the cartesian process grid */
+
   MPI_Cart_coords(MPI_CART_COMM, taskid, cart_ndims, coord);
   printf("Process #%d is at coordinates (%d,%d) of the cartesian grid\n", taskid, coord[0], coord[1]);
 
-  MPI_Finalize(); //For debugging
-  return 0; //For debugging
+  /* The Cartesian Topology provides an efficient way to split the grid based on
+  * the topology grid. We only have to find the size of each worker's grid so
+  * that all the wokrers' grid combined are equal to the initial grid's size. */
 
+  ave_row = NXPROB/cart_dims[0];
+  extra_row = NXPROB%cart_dims[0];
+  rows = (coord[0] == cart_dims[0] - 1) ? ave_row + extra_row : ave_row;
 
-  if (taskid == MASTER) {
-    /******************************* master code ******************************/
-    /* Check if numworkers is within range - quit if not */
-    if ((numworkers > MAXWORKER) || (numworkers < MINWORKER)) {
-      printf("ERROR: the number of tasks must be between %d and %d.\n", MINWORKER+1, MAXWORKER+1);
-      printf("Quitting...\n");
-      MPI_Abort(MPI_COMM_WORLD, rc);
-      exit(1);
-    }
-    printf ("Starting mpi_heat2D with %d worker tasks.\n", numworkers);
+  ave_column = NYPROB/cart_dims[1];
+  extra_column = NYPROB%cart_dims[1];
+  columns = (coord[0] == cart_dims[0] - 1) ? ave_column + extra_column : ave_column;
 
-    
-    printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
-    printf("Initializing grid and writing initial.dat file...\n");
-
-  }
+  printf("Process #%d gets a %d x %d grid (%d x %d including the halo)\n", taskid, rows, columns, rows+2, columns+2);
 
   /* to prwto print, prepei na doume pws tha ginetai
   *  prtdat(NXPROB, NYPROB, u, "initial.dat");*/
 
-  /* Distribute work to workers.  Must first figure out how many rows to
-  *  send and what to do with extra rows. */
-
-  workers_root = sqrt(numworkers);
-
-  /* Calculate the size of your grid, starting with the rows.
-  *  Also find which part of the whole(grid-wise) this task is.
-  *  Offset is the place where the first row/column would fit
-  *  in the big grid.Find the first row of the last task.*/
-  ave_row = NXPROB/(int)workers_root;
-  extra_row = NXPROB%(int)workers_root;
-  offset_row = taskid/(int)workers_root * ave_row;
-  last_first_row = NXPROB-ave_row-1;
-
-  /*Same treatment for columns. */
-  ave_column = NYPROB/(int)numworkers;
-  extra_column = NYPROB%(int)numworkers;
-  offset_column = taskid%(int)workers_root * ave_column;
-  last_first_column = NYPROB-ave_column-1;
-
-  /*Allocate grid memory and initialize it*/  
+  /*Allocate grid memory and initialize it*/
+  //TODO: Fix this
   for(i=0;i<2;i++)
     u[i] = malloc((ave_row+2)*(ave_column+2)*sizeof(float*));
 
   inidat2(ave_row,ave_column,u[0]);
 
-  rows = (taskid <= extra_row) ? ave_row+1 : ave_row; /*den eimai sigouros akoma an douleuei swsta twra auto*/
-  columns = (taskid <= extra_column) ? ave_column+1 : ave_column;
-
-  /* Due to the way we split the grid (top to bottom,
-  *  left to right), the worker's neighbors' id to the 
-  *  left and right are -1,+1 respectively, and its up and down 
-  *  neighbors are -workers_root,+workers_roote. */
-
-  if (offset_row == 0)
-    up = NONE;
-  else
-    up = dest - workers_root;
-  if (offset_row == last_first_row)
-    down = NONE;
-  else
-    down = taskid + workers_root;
-  if (offset_column == 1)
-    left = NONE;
-  else 
-    left = taskid - 1;
-  if (offset_column == last_first_column)
-    right = NONE;
-  else
-    right = dest+1;
-
-  printf("Started task %d: rows= %d offset= %d ",taskid, rows, offset_row);
-  printf("up= %d down= %d left= %d right= %d\n", up, down, left, right);
-
-
-  /******************************* workers code *******************************/
   /* Initialize everything - including the borders - to zero */
   for (iz=0; iz<2; iz++)
     for (ix=0; ix<NXPROB; ix++)
       for (iy=0; iy<NYPROB; iy++)
         u[iz][ix][iy] = 0.0;
-
-  /* Determine border elements.  Need to consider first and last columns.
-  *  Obviously, row 0 can't exchange with row 0-1.  Likewise, the last
-  *  row can't exchange with last+1. */
-  if (offset_row == 0)
-    row_start = 1;
-  else
-    row_start = offset_row;
-  if ((offset_row+rows) == NXPROB)
-    row_end = row_start+rows-2;
-  else
-    row_end = row_start+rows-1;
-
-  /*  Τhe same goes for columns. */
-  if (offset_column == 0)
-    column_start = 1;
-  else
-    column_start = offset_column;
-  if ((offset_column+columns) == NYPROB)
-    column_end = column_start+columns-2;
-  else
-    column_end = column_start+columns-1;
 
   /* Create row and column datatypes. This way we can efficiently send a column
   * from the table without having to copy it to a buffer. More specifically:
@@ -260,24 +190,24 @@ int main (int argc, char *argv[]) {
       MPI_Isend(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
     }
     /* Now call update to update the value of inner grid points */
-    update(row_start+1, row_end-1, column_start+1, column_end-1, NYPROB, &u[iz][0][0],&u[1-iz][0][0]);
+    update(2, rows-1, 2, columns-1, columns, &u[iz][0][0],&u[1-iz][0][0]);
 
     /* Wait for the receives to be over */
     MPI_Waitall(4,r_array,MPI_STATUSES_IGNORE);
 
     /* Update the outer values, based on the halos we have by now received*/
-    update(row_start,row_start,column_start,column_end,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
-    update(row_end,row_end,column_start,column_end,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
-    update(row_start,row_end,column_start,column_start,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
-    update(row_start,row_end,column_end,column_end,NYPROB,&u[iz][0][0],&u[1-iz][0][0]);
+    update(1, 1, 1, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
+    update(rows, rows, 1, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
+    update(1, rows, 1, 1, columns, &u[iz][0][0],&u[1-iz][0][0]);
+    update(1, rows, columns, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
 
     /* Wait for the sends to be over */
     MPI_Waitall(4,s_array,MPI_STATUSES_IGNORE);
 
-
     iz = 1 - iz;
   }
 
+  /* Final data printing */
   if (taskid!=MASTER)
   {
     /* Finally, send my portion of final results back to master */
@@ -297,12 +227,12 @@ int main (int argc, char *argv[]) {
         final_grid = malloc((NXPROB*NYPROB)*sizeof(float*));
       }
       /* Now wait for results from all worker tasks */
-      for (i=1; i<=numworkers; i++) {
+      for (i=1; i<=numtasks; i++) {
         source = i;
         msgtype = DONE;
-        MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(&final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
+        // MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+        // MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
+        // MPI_Recv(&final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
       }
       /* Write final output, call X graph and finalize MPI */
       printf("Writing final.dat file and generating graph...\n");
