@@ -71,6 +71,7 @@ int main (int argc, char *argv[]) {
   int p_name_len;                         /* Processor name length */
   MPI_Request r_array[4];                 /* Handles for receiving information */
   MPI_Request s_array[4];                 /* Handles for sending information */
+  double time1,time2;                     /* Count the time before and after calculations*/
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -152,11 +153,16 @@ int main (int argc, char *argv[]) {
   * A row has <column-size> blocks each of which contain 1 MPI_DOUBLE and there
   * is 1 block between the starts of each block in our table.
   * A column has <row-size> blocks each of which contain 1 MPI_DOUBLE and
-  * there are <row-size> blocks between the start of each block in our table */
+  * there are <row-size> blocks between the start of each block in our table. */
   MPI_Type_vector(columns, 1, 1, MPI_DOUBLE, &MPI_ROW);
   MPI_Type_vector(rows, 1, rows, MPI_DOUBLE , &MPI_COLUMN);
   MPI_Type_commit(&MPI_ROW);
   MPI_Type_commit(&MPI_COLUMN);
+
+  /* Synchronize all tasks by waiting until they all reach this point.
+  *  Once they do, start counting time.*/
+  MPI_Barrier(MPI_COMM_WORLD);
+  time1 = MPI_Wtime();
 
   /* Begin doing STEPS iterations.  Must communicate border rows with
   *  neighbors.  If I have the first  or last grid row, then I only need
@@ -168,7 +174,7 @@ int main (int argc, char *argv[]) {
   /* We store the halo rows in rows 0 and ave_row+1 (first and last),
   *  and the columns respectively. Elements [0][0],[0][columns+1],
   *  [rows+1][0], [rows+1][columns+1], which are the corners
-  *  of the extended grid, are never used*/
+  *  of the extended grid, are never used. */
 
   printf("Task %d received work. Beginning time steps...\n",taskid);
   iz = 0;
@@ -207,9 +213,10 @@ int main (int argc, char *argv[]) {
     iz = 1 - iz;
   }
 
+  time2 = MPI_Wtime();
+
   /* Final data printing */
-  if (taskid!=MASTER)
-  {
+  if (taskid!=MASTER){
     /* Finally, send my portion of final results back to master */
     // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     //MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
