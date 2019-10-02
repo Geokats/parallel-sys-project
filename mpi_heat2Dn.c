@@ -212,7 +212,7 @@ int main (int argc, char *argv[]) {
   {
     /* Finally, send my portion of final results back to master */
     // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
-    MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
+    //MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     // MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
     MPI_Finalize();
 
