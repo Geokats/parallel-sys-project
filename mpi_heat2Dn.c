@@ -70,8 +70,8 @@ int main (int argc, char *argv[]) {
   int coord[2];                           /* Process coordinates in the cartesian grid */
   char p_name[MPI_MAX_PROCESSOR_NAME];    /* Name of the processor the process is running on */
   int p_name_len;                         /* Processor name length */
-  MPI_Request r_array[4];                 /* Handles for receiving information */
-  MPI_Request s_array[4];                 /* Handles for sending information */
+  MPI_Request r_array[2][4];              /* Handles for receiving information */
+  MPI_Request s_array[2][4];              /* Handles for sending information */
   double t_start, t_end, t_run,           /* Count the time before and after calculations*/
          t_max, t_avg;                    /* Max and average time between all processes */
 
@@ -190,47 +190,61 @@ int main (int argc, char *argv[]) {
 
   iz = 0;
 
-  /* Create persistent communication requests for each neighbor */
-  if (left!=NONE){
-    MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[0]));
-    MPI_Send_init(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[0]));
-  }
-  if (up!=NONE){
-    MPI_Recv_init(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[1]));
-    MPI_Send_init(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[1]));
-  }
-  if (right!=NONE){
-    MPI_Recv_init(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[2]));
-    MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2]));
-  }
-  if (down!=NONE){
-    MPI_Recv_init(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[3]));
-    MPI_Send_init(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
+  for (iz;iz<2;iz++){
+    /* Create persistent communication requests for each neighbor */
+    if (left!=NONE){
+      MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[iz][0]));
+      MPI_Send_init(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[iz][0]));
+    }
+    if (up!=NONE){
+      MPI_Recv_init(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[iz][1]));
+      MPI_Send_init(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[iz][1]));
+    }
+    if (right!=NONE){
+      MPI_Recv_init(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[iz][2]));
+      MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[iz][2])); 
+    }
+    if (down!=NONE){
+      MPI_Recv_init(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[iz][3]));
+      MPI_Send_init(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[iz][3]));
+    }
   }
 
 
   for (it = 1; it <= STEPS; it++) {
     if (left != NONE) {
-      MPI_Start(&r_array[0]);
-      MPI_Start(&s_array[0]);
+      MPI_Start(&r_array[iz][0]);
+      MPI_Start(&s_array[iz][0]);
     }
     if (up != NONE) {
-      MPI_Start(&r_array[1]);
-      MPI_Start(&s_array[1]);
+      MPI_Start(&r_array[iz][1]);
+      MPI_Start(&s_array[iz][1]);
     }
     if (right != NONE) {
-      MPI_Start(&r_array[2]);
-      MPI_Start(&s_array[2]);
+      MPI_Start(&r_array[iz][2]);
+      MPI_Start(&s_array[iz][2]);
     }
     if (down != NONE) {
-      MPI_Start(&r_array[3]);
-      MPI_Start(&s_array[3]);
+      MPI_Start(&r_array[iz][3]);
+      MPI_Start(&s_array[iz][3]);
     }
     /* Now call update to update the value of inner grid points */
     update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
 
     /* Wait for the receives to be over */
-    MPI_Waitall(4,r_array,MPI_STATUSES_IGNORE);
+    if (left != NONE) {
+      MPI_Wait(&r_array[iz][0]);
+    }
+    if (up != NONE) {
+      MPI_Wait(&r_array[iz][1]);
+    }
+    if (right != NONE) {
+      MPI_Wait(&r_array[iz][2]);
+    }
+    if (down != NONE) {
+      MPI_Wait(&r_array[iz][3]);
+    }
+    
 
     /* Update the outer values, based on the halos we have by now received*/
     update(1, 1, 1, columns, columns, u[iz], u[1-iz]);
@@ -239,27 +253,40 @@ int main (int argc, char *argv[]) {
     update(1, rows, columns, columns, columns, u[iz], u[1-iz]);
 
     /* Wait for the sends to be over */
-    MPI_Waitall(4,s_array,MPI_STATUSES_IGNORE);
+    if (left != NONE) {
+      MPI_Wait(&s_array[iz][0]);
+    }
+    if (up != NONE) {
+      MPI_Wait(&s_array[iz][1]);
+    }
+    if (right != NONE) {
+      MPI_Wait(&s_array[iz][2]);
+    }
+    if (down != NONE) {
+      MPI_Wait(&s_array[iz][3]);
+    }
 
     iz = 1 - iz;
   }
 
+  for (iz=0;iz<2;iz++){
   /* Free the requests allocated*/
-  if (left!=NONE){
-    MPI_Request_free(&(r_array[0]));
-    MPI_Request_free(&(s_array[0]));
-  }
-  if (up!=NONE){
-    MPI_Request_free(&(r_array[1]));
-    MPI_Request_free(&(s_array[1]));
-  }
-  if (right!=NONE){
-    MPI_Request_free(&(r_array[2]));
-    MPI_Request_free(&(s_array[2]));
-  }
-  if (down!=NONE){
-    MPI_Request_free(&(r_array[3]));
-    MPI_Request_free(&(s_array[3]));
+    if (left!=NONE){
+      MPI_Request_free(&(r_array[iz][0]));
+      MPI_Request_free(&(s_array[iz][0]));
+    }
+    if (up!=NONE){
+      MPI_Request_free(&(r_array[iz][1]));
+      MPI_Request_free(&(s_array[iz][1]));
+    }
+    if (right!=NONE){
+      MPI_Request_free(&(r_array[iz][2]));
+      MPI_Request_free(&(s_array[iz][2]));
+    }
+    if (down!=NONE){
+      MPI_Request_free(&(r_array[iz][3]));
+      MPI_Request_free(&(s_array[iz][3]));
+    }
   }
 
   /* Calculate the total time this process has run */
