@@ -72,7 +72,8 @@ int main (int argc, char *argv[]) {
   int p_name_len;                         /* Processor name length */
   MPI_Request r_array[4];                 /* Handles for receiving information */
   MPI_Request s_array[4];                 /* Handles for sending information */
-  double time1,time2;                     /* Count the time before and after calculations*/
+  double t_start, t_end, t_run,           /* Count the time before and after calculations*/
+         t_max, t_avg;                    /* Max and average time between all processes */
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -174,7 +175,7 @@ int main (int argc, char *argv[]) {
   /* Synchronize all tasks by waiting until they all reach this point.
   *  Once they do, start counting time.*/
   MPI_Barrier(MPI_COMM_WORLD);
-  time1 = MPI_Wtime();
+  t_start = MPI_Wtime();
 
   /* Begin doing STEPS iterations.  Must communicate border rows with
   *  neighbors.  If I have the first  or last grid row, then I only need
@@ -201,7 +202,7 @@ int main (int argc, char *argv[]) {
   }
   if (right!=NONE){
     MPI_Recv_init(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[2]));
-    MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2])); 
+    MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2]));
   }
   if (down!=NONE){
     MPI_Recv_init(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[3]));
@@ -262,7 +263,21 @@ int main (int argc, char *argv[]) {
     MPI_Request_free(&(s_array[3]));
   }
 
-  time2 = MPI_Wtime();
+  /* Calculate the total time this process has run */
+  t_end = MPI_Wtime();
+  t_run = t_end - t_start;
+  /* Calculate the max time a process has run, between all the processes. The
+  * process with id == 0, takes care of gathering the result and printing it. */
+  MPI_Reduce(&t_run, &t_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_CART_COMM);
+  if(taskid == 0){
+    printf("Max time = %f\n", t_max);
+  }
+  /* Calculate the average time a process has run, between all the processes */
+  MPI_Reduce(&t_run, &t_avg, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_CART_COMM);
+  if(taskid == 0){
+    t_avg = t_avg / (double) numtasks;
+    printf("Average time = %f\n", t_avg);
+  }
 
   /* Final data printing */
   if (taskid!=MASTER){
