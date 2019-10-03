@@ -157,10 +157,10 @@ int main (int argc, char *argv[]) {
       for (iy=0; iy<columns+2; iy++)
         u[iz][ix][iy] = 0.0;
 
-  prtfdat(rows+2, columns+2, u[0]);
-
   inidat(rows+2, columns+2, u[0]);
+
   prtfdat(rows+2, columns+2, u[0]);
+  fflush(stdout);
 
   MPI_Finalize(); //for debugging
   return 0;
@@ -288,12 +288,15 @@ void update(int x_start, int x_end, int y_start, int y_end,int ny, float *u1, fl
 }
 
 /****************************** subroutine inidat *****************************/
-void inidat(int nx, int ny, float *u) {
+void inidat(int nx, int ny, float **u) {
   int ix, iy;
 
-  for (ix = 0; ix <= nx-1; ix++)
-    for (iy = 0; iy <= ny-1; iy++)
-      *(u+ix*ny+iy) = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
+  for (ix = 0; ix <= nx-1; ix++) {
+    for (iy = 0; iy <= ny-1; iy++) {
+      //*(u+ix*ny+iy) = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
+      u[ix][iy] = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
+    }
+  }
 }
 
 void inidat2(int nx, int ny, int startx, int starty, float *u) {
@@ -340,7 +343,7 @@ void prtfdat(int nx, int ny, float **u1) {
 
   for (iy = 0; iy <= ny-1; iy++) {
     for (ix = 0; ix <= nx-1; ix++) {
-      printf("%6.1f", *(u1+ix*ny+iy));
+      printf("%6.1f", u1[ix][iy]);
       if (ix != nx-1)
         printf(" ");
       else
