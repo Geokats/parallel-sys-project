@@ -72,6 +72,7 @@ int main (int argc, char *argv[]) {
     for (ix=0; ix<rows+2; ix++)
       for (iy=0; iy<columns+2; iy++)
         u[iz][ix][iy] = 0.0;
+        printf("%f ", u[iz][ix][iy]);
 
   prtfdat(rows+2, columns+2, u[0]);
 
