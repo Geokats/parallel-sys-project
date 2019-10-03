@@ -30,8 +30,8 @@
 #define NXPROB      20                 /* x dimension of problem grid */
 #define NYPROB      20                 /* y dimension of problem grid */
 #define STEPS       100                /* number of time steps */
-#define MAXWORKER   8                  /* maximum number of worker tasks */
-#define MINWORKER   3                  /* minimum number of worker tasks */
+#define MAXWORKER   160                /* maximum number of worker tasks */
+#define MINWORKER   1                  /* minimum number of worker tasks */
 #define BEGIN       1                  /* message tag */
 #define LTAG        2                  /* message tag */
 #define RTAG        3                  /* message tag */
@@ -156,14 +156,8 @@ int main (int argc, char *argv[]) {
     for (ix=0; ix<rows+2; ix++)
       for (iy=0; iy<columns+2; iy++)
         u[iz][ix][iy] = 0.0;
-
+  /* Initialize table values */
   inidat(rows+2, columns+2, u[0]);
-
-  prtfdat(rows+2, columns+2, u[0]);
-  fflush(stdout);
-
-  MPI_Finalize(); //for debugging
-  return 0;
 
   /* Create row and column datatypes. This way we can efficiently send a column
   * from the table without having to copy it to a buffer. More specifically:
@@ -225,6 +219,8 @@ int main (int argc, char *argv[]) {
     iz = 1 - iz;
   }
 
+  printf("Process #%d finished calculations\n", taskid);
+
   /* Final data printing */
   if (taskid!=MASTER)
   {
@@ -232,11 +228,6 @@ int main (int argc, char *argv[]) {
     // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     // MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
-    MPI_Finalize();
-
-    /* Free the allocated grid memory*/
-    free(u[0]);
-    free(u[1]);
   }
   else{
       /*Allocate memory to gather all grids together*/
@@ -259,8 +250,6 @@ int main (int argc, char *argv[]) {
       printf("Click on EXIT button to quit program.\n");
 
       free(final_grid);
-      MPI_Finalize();
-      /* End of master code */
   }
 
   /* Free allocated memory */
@@ -268,6 +257,8 @@ int main (int argc, char *argv[]) {
     free(u[z][0]);
     free(u[z]);
   }
+  MPI_Finalize();
+  return 0;
 }
 
 /****************************** subroutine update *****************************/
@@ -293,7 +284,6 @@ void inidat(int nx, int ny, float **u) {
 
   for (ix = 0; ix <= nx-1; ix++) {
     for (iy = 0; iy <= ny-1; iy++) {
-      //*(u+ix*ny+iy) = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
       u[ix][iy] = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
     }
   }
@@ -327,7 +317,7 @@ void prtdat(int nx, int ny, float **u1, char *fnam) {
   fp = fopen(fnam, "w");
   for (iy = ny-1; iy >= 0; iy--) {
     for (ix = 0; ix <= nx-1; ix++) {
-      fprintf(fp, "%6.1f", *(u1+ix*ny+iy));
+      fprintf(fp, "%6.1f", u1[ix][iy]);
       if (ix != nx-1)
         fprintf(fp, " ");
       else
