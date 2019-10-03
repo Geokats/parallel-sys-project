@@ -182,36 +182,38 @@ int main (int argc, char *argv[]) {
   *  and the columns respectively. Elements [0][0],[0][columns+1],
   *  [rows+1][0], [rows+1][columns+1], which are the corners
   *  of the extended grid, are never used*/
-
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
-    if (left != NONE) {
+    printf("Process #%d starting communications for iteration #%d\n", taskid, it);
+//    if (left != NONE) {
       MPI_Irecv(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[0]));
       MPI_Isend(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[0]));
-    }
-    if (up != NONE) {
+//    }
+//    if (up != NONE) {
       MPI_Irecv(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[1]));
       MPI_Isend(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[1]));
-    }
-    if (right != NONE) {
+//    }
+//    if (right != NONE) {
       MPI_Irecv(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[2]));
       MPI_Isend(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2]));
-    }
-    if (down != NONE) {
+//    }
+//    if (down != NONE) {
       MPI_Irecv(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[3]));
       MPI_Isend(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
-    }
+//    }
+    printf("Process #%d starting inner updates for iteration #%d\n", taskid, it);
     /* Now call update to update the value of inner grid points */
-    update(2, rows-1, 2, columns-1, columns, &u[iz][0][0],&u[1-iz][0][0]);
+    update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
 
     /* Wait for the receives to be over */
     MPI_Waitall(4,r_array,MPI_STATUSES_IGNORE);
-
+    
+    printf("Process #%d starting outter updates for iteration #%d\n", taskid, it);
     /* Update the outer values, based on the halos we have by now received*/
-    update(1, 1, 1, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
-    update(rows, rows, 1, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
-    update(1, rows, 1, 1, columns, &u[iz][0][0],&u[1-iz][0][0]);
-    update(1, rows, columns, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
+    update(1, 1, 1, columns, columns, u[iz], u[1-iz]);
+    update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);
+    update(1, rows, 1, 1, columns, u[iz], u[1-iz]);
+    update(1, rows, columns, columns, columns, u[iz], u[1-iz]);
 
     /* Wait for the sends to be over */
     MPI_Waitall(4,s_array,MPI_STATUSES_IGNORE);
@@ -226,7 +228,7 @@ int main (int argc, char *argv[]) {
   {
     /* Finally, send my portion of final results back to master */
     // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
-    MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
+    //MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     // MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
   }
   else{
@@ -245,7 +247,7 @@ int main (int argc, char *argv[]) {
       }
       /* Write final output, call X graph and finalize MPI */
       printf("Writing final.dat file and generating graph...\n");
-      prtdat(NXPROB, NYPROB, &final_grid, "final.dat");
+      //prtdat(NXPROB, NYPROB, &final_grid, "final.dat");
       printf("Click on MORE button to view initial/final states.\n");
       printf("Click on EXIT button to quit program.\n");
 
@@ -264,18 +266,23 @@ int main (int argc, char *argv[]) {
 /****************************** subroutine update *****************************/
 /* u2[ix][iy] = u1[ix][iy]
                 + cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2 * u1[ix][iy] )
-                + cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2 * u1[xi][yi] ) */
-void update(int x_start, int x_end, int y_start, int y_end,int ny, float *u1, float *u2) {
+                + cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2 * u1[ix][iy] ) */
+void update(int x_start, int x_end, int y_start, int y_end,int ny, float **u1, float **u2) {
   int ix, iy;
-  for (ix = x_start; ix <= x_end; ix++)
-    for (iy = y_start; iy <= y_end; iy++)
-      *(u2+ix*ny+iy) = *(u1+ix*ny+iy)  +
-                      parms.cx * (*(u1+(ix+1)*ny+iy) +
-                      *(u1+(ix-1)*ny+iy) -
-                      2.0 * *(u1+ix*ny+iy)) +
-                      parms.cy * (*(u1+ix*ny+iy+1) +
-                     *(u1+ix*ny+iy-1) -
-                      2.0 * *(u1+ix*ny+iy));
+  for (ix = x_start; ix <= x_end; ix++){
+    for (iy = y_start; iy <= y_end; iy++){
+//      *(u2+ix*ny+iy) = *(u1+ix*ny+iy)  +
+      u2[ix][iy] = u1[ix][iy]
+                   + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
+//                      parms.cx * (*(u1+(ix+1)*ny+iy) +
+//                      *(u1+(ix-1)*ny+iy) -
+//                      2.0 * *(u1+ix*ny+iy)) +
+                   + parms.cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2.0 * u1[ix][iy] ); 
+//                      parms.cy * (*(u1+ix*ny+iy+1) +
+//                     *(u1+ix*ny+iy-1) -
+//                      2.0 * *(u1+ix*ny+iy));
+    }
+  }
 }
 
 /****************************** subroutine inidat *****************************/
