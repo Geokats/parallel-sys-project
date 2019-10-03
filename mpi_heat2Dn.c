@@ -336,7 +336,7 @@ void prtdat(int nx, int ny, float *u1, char *fnam) {
 }
 
 /****************************** subroutine prtfdat *****************************/
-void prtfdat(int nx, int ny, float *u1) {
+void prtfdat(int nx, int ny, float **u1) {
   int ix, iy;
 
   for (iy = 0; iy <= ny-1; iy++) {
