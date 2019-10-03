@@ -158,13 +158,12 @@ int main (int argc, char *argv[]) {
         u[iz][ix][iy] = 0.0;
 
   prtfdat(rows+2, columns+2, u[0]);
-  
+
+  inidat(rows+2, columns+2, u[0]);
+  prtfdat(rows+2, columns+2, u[0]);
+
   MPI_Finalize(); //for debugging
   return 0;
-
-  //inidat(rows+2, columns+2, u[0]);
-
-  //prtfdat(rows+2, columns+2, u[0]);
 
   /* Create row and column datatypes. This way we can efficiently send a column
   * from the table without having to copy it to a buffer. More specifically:
@@ -275,7 +274,7 @@ int main (int argc, char *argv[]) {
 /* u2[ix][iy] = u1[ix][iy]
                 + cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2 * u1[ix][iy] )
                 + cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2 * u1[xi][yi] ) */
-void update(int x_start, int x_end, int y_start, int y_end,int ny, float *u1, float *u2) {
+void update(int x_start, int x_end, int y_start, int y_end,int ny, float **u1, float **u2) {
   int ix, iy;
   for (ix = x_start; ix <= x_end; ix++)
     for (iy = y_start; iy <= y_end; iy++)
@@ -289,7 +288,7 @@ void update(int x_start, int x_end, int y_start, int y_end,int ny, float *u1, fl
 }
 
 /****************************** subroutine inidat *****************************/
-void inidat(int nx, int ny, float *u) {
+void inidat(int nx, int ny, float **u) {
   int ix, iy;
 
   for (ix = 0; ix <= nx-1; ix++)
@@ -297,7 +296,7 @@ void inidat(int nx, int ny, float *u) {
       *(u+ix*ny+iy) = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
 }
 
-void inidat2(int nx, int ny, int startx, int starty, float *u) {
+void inidat2(int nx, int ny, int startx, int starty, float **u) {
   int ix, iy;
   int i,j;
   for (i=1;i<nx;i++)
@@ -318,7 +317,7 @@ void inidat2(int nx, int ny, int startx, int starty, float *u) {
 }
 
 /****************************** subroutine prtdat *****************************/
-void prtdat(int nx, int ny, float *u1, char *fnam) {
+void prtdat(int nx, int ny, float **u1, char *fnam) {
   int ix, iy;
   FILE *fp;
 
