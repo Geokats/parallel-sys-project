@@ -30,8 +30,8 @@
 #define NXPROB      20                 /* x dimension of problem grid */
 #define NYPROB      20                 /* y dimension of problem grid */
 #define STEPS       100                /* number of time steps */
-#define MAXWORKER   8                  /* maximum number of worker tasks */
-#define MINWORKER   3                  /* minimum number of worker tasks */
+#define MAXWORKER   160                /* maximum number of worker tasks */
+#define MINWORKER   1                  /* minimum number of worker tasks */
 #define BEGIN       1                  /* message tag */
 #define LTAG        2                  /* message tag */
 #define RTAG        3                  /* message tag */
@@ -47,9 +47,10 @@ struct Parms {
 } parms = {0.1, 0.1};
 
 int main (int argc, char *argv[]) {
-  void inidat(),prtdat(),update(),inidat2();
+  void inidat(),prtdat(),prtfdat(),update(),inidat2();
   float **u[2];                           /* array for grid */
   float **final_grid;                     /* the final grid that gets printed*/
+  float *temp;                            /* for temporarily storing malloc-ed memory */
   int	taskid;                             /* this task's unique id */
 	int numtasks;                           /* number of tasks */
 	int ave_row,rows,extra_row;             /* for sending rows of data */
@@ -58,7 +59,7 @@ int main (int argc, char *argv[]) {
 	int left,right,up,down;                 /* neighbor tasks */
 	int msgtype;                            /* for message types */
 	int rc;                                 /* misc */
-	int i,j,ix,iy,iz,it;                    /* loop variables */
+	int i,j,z,ix,iy,iz,it;                  /* loop variables */
   MPI_Status status;
   MPI_Datatype MPI_ROW, MPI_COLUMN;       /* datatypes used for efficient data transfers between workers */
   MPI_Comm MPI_CART_COMM;                 /* Cartesian Communication World */
@@ -128,25 +129,35 @@ int main (int argc, char *argv[]) {
 
   ave_column = NYPROB/cart_dims[1];
   extra_column = NYPROB%cart_dims[1];
-  columns = (coord[0] == cart_dims[0] - 1) ? ave_column + extra_column : ave_column;
+  columns = (coord[1] == cart_dims[1] - 1) ? ave_column + extra_column : ave_column;
 
   printf("Process #%d gets a %d x %d grid (%d x %d including the halo)\n", taskid, rows, columns, rows+2, columns+2);
 
   /* to prwto print, prepei na doume pws tha ginetai
   *  prtdat(NXPROB, NYPROB, u, "initial.dat");*/
 
-  /*Allocate grid memory and initialize it*/
-  //TODO: Fix this
-  for(i=0;i<2;i++)
-    u[i] = malloc((ave_row+2)*(ave_column+2)*sizeof(float*));
+  /* Allocate grid memory for this process:
+  * It is very important that the memory we allocate for this grid is consistent
+  * (i.e. in consecutive memory addresses) otherwise our custom MPI_Datatypes
+  * for rows and more specifically for columns will not work properly. To
+  * achieve this we malloc all the memory needed at start and then create
+  * pointers for each row that point to this memory. */
 
-  inidat2(ave_row,ave_column,u[0]);
+  for(z=0; z<2; z++){
+    u[z] = (float**) malloc((rows+2) * sizeof(float*));
+    temp = (float*) malloc((rows+2) * (columns+2) * sizeof(float));
+    for(i=0; i<rows+2; i++){
+      u[z][i] = (float*) &(temp[i * (columns + 2)]);
+    }
+  }
 
   /* Initialize everything - including the borders - to zero */
   for (iz=0; iz<2; iz++)
-    for (ix=0; ix<NXPROB; ix++)
-      for (iy=0; iy<NYPROB; iy++)
+    for (ix=0; ix<rows+2; ix++)
+      for (iy=0; iy<columns+2; iy++)
         u[iz][ix][iy] = 0.0;
+  /* Initialize table values */
+  inidat(rows+2, columns+2, u[0]);
 
   /* Create row and column datatypes. This way we can efficiently send a column
   * from the table without having to copy it to a buffer. More specifically:
@@ -158,6 +169,7 @@ int main (int argc, char *argv[]) {
   MPI_Type_vector(rows, 1, rows, MPI_DOUBLE , &MPI_COLUMN);
   MPI_Type_commit(&MPI_ROW);
   MPI_Type_commit(&MPI_COLUMN);
+  //TODO: Do these need to be freed(?) somehow?
 
   /* Synchronize all tasks by waiting until they all reach this point.
   *  Once they do, start counting time.*/
@@ -171,12 +183,11 @@ int main (int argc, char *argv[]) {
   *  the inside grid values, which require only already available information.
   *  After communication has been completed, update the outer values of the grid.*/
 
-  /* We store the halo rows in rows 0 and ave_row+1 (first and last),
+  /* We store the halo rows in rows 0 and rows+1 (first and last),
   *  and the columns respectively. Elements [0][0],[0][columns+1],
   *  [rows+1][0], [rows+1][columns+1], which are the corners
   *  of the extended grid, are never used. */
 
-  printf("Task %d received work. Beginning time steps...\n",taskid);
   iz = 0;
 
   /* Create persistent communication requests for each neighbor */
@@ -216,16 +227,16 @@ int main (int argc, char *argv[]) {
       MPI_Start(&s_array[3]);
     }
     /* Now call update to update the value of inner grid points */
-    update(2, rows-1, 2, columns-1, columns, &u[iz][0][0],&u[1-iz][0][0]);
+    update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
 
     /* Wait for the receives to be over */
     MPI_Waitall(4,r_array,MPI_STATUSES_IGNORE);
 
     /* Update the outer values, based on the halos we have by now received*/
-    update(1, 1, 1, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
-    update(rows, rows, 1, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
-    update(1, rows, 1, 1, columns, &u[iz][0][0],&u[1-iz][0][0]);
-    update(1, rows, columns, columns, columns, &u[iz][0][0],&u[1-iz][0][0]);
+    update(1, 1, 1, columns, columns, u[iz], u[1-iz]);
+    update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);
+    update(1, rows, 1, 1, columns, u[iz], u[1-iz]);
+    update(1, rows, columns, columns, columns, u[iz], u[1-iz]);
 
     /* Wait for the sends to be over */
     MPI_Waitall(4,s_array,MPI_STATUSES_IGNORE);
@@ -259,11 +270,6 @@ int main (int argc, char *argv[]) {
     // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     //MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     // MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
-    MPI_Finalize();
-
-    /* Free the allocated grid memory*/
-    free(u[0]);
-    free(u[1]);
   }
   else{
       /*Allocate memory to gather all grids together*/
@@ -281,71 +287,54 @@ int main (int argc, char *argv[]) {
       }
       /* Write final output, call X graph and finalize MPI */
       printf("Writing final.dat file and generating graph...\n");
-      prtdat(NXPROB, NYPROB, &final_grid, "final.dat");
+      //prtdat(NXPROB, NYPROB, &final_grid, "final.dat");
       printf("Click on MORE button to view initial/final states.\n");
       printf("Click on EXIT button to quit program.\n");
 
       free(final_grid);
-      MPI_Finalize();
-      /* End of master code */
   }
+
+  /* Free allocated memory */
+  for(z=0; z<2; z++){
+    free(u[z][0]);
+    free(u[z]);
+  }
+  MPI_Finalize();
+  return 0;
 }
 
 /****************************** subroutine update *****************************/
-/* u2[ix][iy] = u1[ix][iy]
-                + cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2 * u1[ix][iy] )
-                + cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2 * u1[xi][yi] ) */
-void update(int x_start, int x_end, int y_start, int y_end,int ny, float *u1, float *u2) {
+void update(int x_start, int x_end, int y_start, int y_end,int ny, float **u1, float **u2) {
   int ix, iy;
-  for (ix = x_start; ix <= x_end; ix++)
-    for (iy = y_start; iy <= y_end; iy++)
-      *(u2+ix*ny+iy) = *(u1+ix*ny+iy)  +
-                      parms.cx * (*(u1+(ix+1)*ny+iy) +
-                      *(u1+(ix-1)*ny+iy) -
-                      2.0 * *(u1+ix*ny+iy)) +
-                      parms.cy * (*(u1+ix*ny+iy+1) +
-                     *(u1+ix*ny+iy-1) -
-                      2.0 * *(u1+ix*ny+iy));
+  for (ix = x_start; ix <= x_end; ix++){
+    for (iy = y_start; iy <= y_end; iy++){
+      u2[ix][iy] = u1[ix][iy]
+                 + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
+                 + parms.cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2.0 * u1[ix][iy] );
+    }
+  }
 }
 
 /****************************** subroutine inidat *****************************/
-void inidat(int nx, int ny, float *u) {
+void inidat(int nx, int ny, float **u) {
   int ix, iy;
 
-  for (ix = 0; ix <= nx-1; ix++)
-    for (iy = 0; iy <= ny-1; iy++)
-      *(u+ix*ny+iy) = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
-}
-
-void inidat2(int nx, int ny, int startx, int starty, float *u) {
-  int ix, iy;
-  int i,j;
-  for (i=1;i<nx;i++)
-  {
-    *(u+i*ny) = 0.0;
-    *(u+i*ny+ny+2) = 0.0;
-
+  for (ix = 0; ix <= nx-1; ix++) {
+    for (iy = 0; iy <= ny-1; iy++) {
+      u[ix][iy] = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
+    }
   }
-  for (i=1;i<ny;i++)
-  {
-    *(u+i) = 0.0;
-    *(u+(nx+2)*ny+i) = 0.0;
-  }
-
-  for (ix = startx; ix <= nx; ix++)
-    for (iy = starty; iy <= ny; iy++)
-      *(u+ix*ny+iy) = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
 }
 
 /****************************** subroutine prtdat *****************************/
-void prtdat(int nx, int ny, float *u1, char *fnam) {
+void prtdat(int nx, int ny, float **u1, char *fnam) {
   int ix, iy;
   FILE *fp;
 
   fp = fopen(fnam, "w");
   for (iy = ny-1; iy >= 0; iy--) {
     for (ix = 0; ix <= nx-1; ix++) {
-      fprintf(fp, "%6.1f", *(u1+ix*ny+iy));
+      fprintf(fp, "%6.1f", u1[ix][iy]);
       if (ix != nx-1)
         fprintf(fp, " ");
       else
@@ -353,4 +342,19 @@ void prtdat(int nx, int ny, float *u1, char *fnam) {
     }
   }
   fclose(fp);
+}
+
+/****************************** subroutine prtfdat *****************************/
+void prtfdat(int nx, int ny, float **u1) {
+  int ix, iy;
+
+  for (iy = 0; iy <= ny-1; iy++) {
+    for (ix = 0; ix <= nx-1; ix++) {
+      printf("%6.1f", u1[ix][iy]);
+      if (ix != nx-1)
+        printf(" ");
+      else
+        printf("\n");
+    }
+  }
 }
