@@ -55,45 +55,8 @@ int main (int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
 
-  if (taskid == 0) {
-    printf ("Starting mpi_heat2D with %d worker tasks.\n", numtasks);
-
-    printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
-    printf("Initializing grid and writing initial.dat file...\n");
-
-  }
-
-  /* Create a cartesian topology for the processes */
-  MPI_Dims_create(numtasks, cart_ndims, cart_dims);
-  if(taskid == 0){
-    printf("Creating a cartesian topology of %d x %d dimensions\n", cart_dims[0], cart_dims[1]);
-    printf("MPI_PROC_NULL == %d\n", MPI_PROC_NULL);
-  }
-
-  /* Get the name of the physical node the process is running in */
-  MPI_Get_processor_name(p_name, &p_name_len);
-  printf("Process #%d is running in processor: %s. up=%d, down=%d, left=%d, right=%d\n", taskid, p_name, up, down, left, right);
-  /*Get the coordinates of the process in the cartesian process grid */
-
-  ave_row = NXPROB/cart_dims[0];
-  extra_row = NXPROB%cart_dims[0];
-  rows = (coord[0] == cart_dims[0] - 1) ? ave_row + extra_row : ave_row;
-
-  ave_column = NYPROB/cart_dims[1];
-  extra_column = NYPROB%cart_dims[1];
-  columns = (coord[1] == cart_dims[1] - 1) ? ave_column + extra_column : ave_column;
-
-  printf("Process #%d gets a %d x %d grid (%d x %d including the halo)\n", taskid, rows, columns, rows+2, columns+2);
-
-  /* to prwto print, prepei na doume pws tha ginetai
-  *  prtdat(NXPROB, NYPROB, u, "initial.dat");*/
-
-  /* Allocate grid memory for this process:
-  * It is very important that the memory we allocate for this grid is consistent
-  * (i.e. in consecutive memory addresses) otherwise our custom MPI_Datatypes
-  * for rows and more specifically for columns will not work properly. To
-  * achieve this we malloc all the memory needed at start and then create
-  * pointers for each row that point to this memory. */
+  rows = 2;
+  columns = 4;
 
   for(z=0; z<2; z++){
     u[z] = (float**) malloc((rows+2) * sizeof(float*));
