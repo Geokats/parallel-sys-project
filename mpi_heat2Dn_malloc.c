@@ -69,27 +69,11 @@ int main (int argc, char *argv[]) {
     printf("Creating a cartesian topology of %d x %d dimensions\n", cart_dims[0], cart_dims[1]);
     printf("MPI_PROC_NULL == %d\n", MPI_PROC_NULL);
   }
-  MPI_Cart_create(MPI_COMM_WORLD, cart_ndims, cart_dims, cart_periods, cart_reorder, &MPI_CART_COMM);
-  MPI_Barrier(MPI_CART_COMM);
-
-  /* Because of reordering the process id might have changed */
-  MPI_Comm_rank(MPI_CART_COMM, &taskid);
-
-  /* Find up, down, left and right neighbors in the grid */
-  MPI_Cart_shift(MPI_CART_COMM, 0, 1, &left, &right);
-  MPI_Cart_shift(MPI_CART_COMM, 1, 1, &down, &up);
 
   /* Get the name of the physical node the process is running in */
   MPI_Get_processor_name(p_name, &p_name_len);
   printf("Process #%d is running in processor: %s. up=%d, down=%d, left=%d, right=%d\n", taskid, p_name, up, down, left, right);
   /*Get the coordinates of the process in the cartesian process grid */
-
-  MPI_Cart_coords(MPI_CART_COMM, taskid, cart_ndims, coord);
-  printf("Process #%d is at coordinates (%d,%d) of the cartesian grid\n", taskid, coord[0], coord[1]);
-
-  /* The Cartesian Topology provides an efficient way to split the grid based on
-  * the topology grid. We only have to find the size of each worker's grid so
-  * that all the wokrers' grid combined are equal to the initial grid's size. */
 
   ave_row = NXPROB/cart_dims[0];
   extra_row = NXPROB%cart_dims[0];
@@ -97,7 +81,7 @@ int main (int argc, char *argv[]) {
 
   ave_column = NYPROB/cart_dims[1];
   extra_column = NYPROB%cart_dims[1];
-  columns = (coord[0] == cart_dims[0] - 1) ? ave_column + extra_column : ave_column;
+  columns = (coord[1] == cart_dims[1] - 1) ? ave_column + extra_column : ave_column;
 
   printf("Process #%d gets a %d x %d grid (%d x %d including the halo)\n", taskid, rows, columns, rows+2, columns+2);
 
