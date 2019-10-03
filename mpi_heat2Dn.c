@@ -72,6 +72,7 @@ int main (int argc, char *argv[]) {
   int p_name_len;                         /* Processor name length */
   MPI_Request r_array[4];                 /* Handles for receiving information */
   MPI_Request s_array[4];                 /* Handles for sending information */
+  double time1,time2;                     /* Count the time before and after calculations*/
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -163,12 +164,17 @@ int main (int argc, char *argv[]) {
   * A row has <column-size> blocks each of which contain 1 MPI_DOUBLE and there
   * is 1 block between the starts of each block in our table.
   * A column has <row-size> blocks each of which contain 1 MPI_DOUBLE and
-  * there are <row-size> blocks between the start of each block in our table */
+  * there are <row-size> blocks between the start of each block in our table. */
   MPI_Type_vector(columns, 1, 1, MPI_DOUBLE, &MPI_ROW);
   MPI_Type_vector(rows, 1, rows, MPI_DOUBLE , &MPI_COLUMN);
   MPI_Type_commit(&MPI_ROW);
   MPI_Type_commit(&MPI_COLUMN);
   //TODO: Do these need to be freed(?) somehow?
+
+  /* Synchronize all tasks by waiting until they all reach this point.
+  *  Once they do, start counting time.*/
+  MPI_Barrier(MPI_COMM_WORLD);
+  time1 = MPI_Wtime();
 
   /* Begin doing STEPS iterations.  Must communicate border rows with
   *  neighbors.  If I have the first  or last grid row, then I only need
@@ -180,22 +186,46 @@ int main (int argc, char *argv[]) {
   /* We store the halo rows in rows 0 and rows+1 (first and last),
   *  and the columns respectively. Elements [0][0],[0][columns+1],
   *  [rows+1][0], [rows+1][columns+1], which are the corners
-  *  of the extended grid, are never used*/
-  iz = 0;
-  for (it = 1; it <= STEPS; it++) {
-    /* Communicate with left neighbor */
-    MPI_Irecv(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[0]));
-    MPI_Isend(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[0]));
-    /* Communicate with up neighbor */
-    MPI_Irecv(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[1]));
-    MPI_Isend(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[1]));
-    /* Communicate with right neighbor */
-    MPI_Irecv(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[2]));
-    MPI_Isend(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2]));
-    /* Communicate with down neighbor */
-    MPI_Irecv(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[3]));
-    MPI_Isend(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
+  *  of the extended grid, are never used. */
 
+  iz = 0;
+
+  /* Create persistent communication requests for each neighbor */
+  if (left!=NONE){
+    MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[0]));
+    MPI_Send_init(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[0]));
+  }
+  if (up!=NONE){
+    MPI_Recv_init(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[1]));
+    MPI_Send_init(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[1]));
+  }
+  if (right!=NONE){
+    MPI_Recv_init(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[2]));
+    MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[2])); 
+  }
+  if (down!=NONE){
+    MPI_Recv_init(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[3]));
+    MPI_Send_init(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[3]));
+  }
+
+
+  for (it = 1; it <= STEPS; it++) {
+    if (left != NONE) {
+      MPI_Start(&r_array[0]);
+      MPI_Start(&s_array[0]);
+    }
+    if (up != NONE) {
+      MPI_Start(&r_array[1]);
+      MPI_Start(&s_array[1]);
+    }
+    if (right != NONE) {
+      MPI_Start(&r_array[2]);
+      MPI_Start(&s_array[2]);
+    }
+    if (down != NONE) {
+      MPI_Start(&r_array[3]);
+      MPI_Start(&s_array[3]);
+    }
     /* Now call update to update the value of inner grid points */
     update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
 
@@ -214,9 +244,28 @@ int main (int argc, char *argv[]) {
     iz = 1 - iz;
   }
 
+  /* Free the requests allocated*/
+  if (left!=NONE){
+    MPI_Request_free(&(r_array[0]));
+    MPI_Request_free(&(s_array[0]));
+  }
+  if (up!=NONE){
+    MPI_Request_free(&(r_array[1]));
+    MPI_Request_free(&(s_array[1]));
+  }
+  if (right!=NONE){
+    MPI_Request_free(&(r_array[2]));
+    MPI_Request_free(&(s_array[2]));
+  }
+  if (down!=NONE){
+    MPI_Request_free(&(r_array[3]));
+    MPI_Request_free(&(s_array[3]));
+  }
+
+  time2 = MPI_Wtime();
+
   /* Final data printing */
-  if (taskid!=MASTER)
-  {
+  if (taskid!=MASTER){
     /* Finally, send my portion of final results back to master */
     // MPI_Send(&offset, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
     //MPI_Send(&rows, 1, MPI_INT, MASTER, DONE, MPI_COMM_WORLD);
