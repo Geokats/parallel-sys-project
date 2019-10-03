@@ -56,13 +56,6 @@ int main (int argc, char *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
 
   if (taskid == 0) {
-    /* Check if numtasks is within range - quit if not */
-    if ((numtasks > MAXWORKER) || (numtasks < MINWORKER)) {
-      printf("ERROR: the number of tasks must be between %d and %d.\n", MINWORKER+1, MAXWORKER+1);
-      printf("Quitting...\n");
-      MPI_Abort(MPI_COMM_WORLD, rc);
-      exit(1);
-    }
     printf ("Starting mpi_heat2D with %d worker tasks.\n", numtasks);
 
     printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
@@ -143,23 +136,6 @@ int main (int argc, char *argv[]) {
   //prtfdat(rows+2, columns+2, u[0]);
 }
 
-/****************************** subroutine update *****************************/
-/* u2[ix][iy] = u1[ix][iy]
-                + cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2 * u1[ix][iy] )
-                + cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2 * u1[xi][yi] ) */
-void update(int x_start, int x_end, int y_start, int y_end,int ny, float *u1, float *u2) {
-  int ix, iy;
-  for (ix = x_start; ix <= x_end; ix++)
-    for (iy = y_start; iy <= y_end; iy++)
-      *(u2+ix*ny+iy) = *(u1+ix*ny+iy)  +
-                      parms.cx * (*(u1+(ix+1)*ny+iy) +
-                      *(u1+(ix-1)*ny+iy) -
-                      2.0 * *(u1+ix*ny+iy)) +
-                      parms.cy * (*(u1+ix*ny+iy+1) +
-                     *(u1+ix*ny+iy-1) -
-                      2.0 * *(u1+ix*ny+iy));
-}
-
 /****************************** subroutine inidat *****************************/
 void inidat(int nx, int ny, float *u) {
   int ix, iy;
@@ -168,45 +144,6 @@ void inidat(int nx, int ny, float *u) {
     for (iy = 0; iy <= ny-1; iy++)
       *(u+ix*ny+iy) = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
 }
-
-void inidat2(int nx, int ny, int startx, int starty, float *u) {
-  int ix, iy;
-  int i,j;
-  for (i=1;i<nx;i++)
-  {
-    *(u+i*ny) = 0.0;
-    *(u+i*ny+ny+2) = 0.0;
-
-  }
-  for (i=1;i<ny;i++)
-  {
-    *(u+i) = 0.0;
-    *(u+(nx+2)*ny+i) = 0.0;
-  }
-
-  for (ix = startx; ix <= nx; ix++)
-    for (iy = starty; iy <= ny; iy++)
-      *(u+ix*ny+iy) = (float)(ix * (nx - ix - 1) * iy * (ny - iy - 1));
-}
-
-/****************************** subroutine prtdat *****************************/
-void prtdat(int nx, int ny, float *u1, char *fnam) {
-  int ix, iy;
-  FILE *fp;
-
-  fp = fopen(fnam, "w");
-  for (iy = ny-1; iy >= 0; iy--) {
-    for (ix = 0; ix <= nx-1; ix++) {
-      fprintf(fp, "%6.1f", *(u1+ix*ny+iy));
-      if (ix != nx-1)
-        fprintf(fp, " ");
-      else
-        fprintf(fp, "\n");
-    }
-  }
-  fclose(fp);
-}
-
 /****************************** subroutine prtfdat *****************************/
 void prtfdat(int nx, int ny, float *u1) {
   int ix, iy;
