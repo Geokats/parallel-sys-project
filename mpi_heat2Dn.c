@@ -169,7 +169,6 @@ int main (int argc, char *argv[]) {
   MPI_Type_vector(rows, 1, rows, MPI_DOUBLE , &MPI_COLUMN);
   MPI_Type_commit(&MPI_ROW);
   MPI_Type_commit(&MPI_COLUMN);
-  //TODO: Do these need to be freed(?) somehow?
 
   /* Synchronize all tasks by waiting until they all reach this point.
   *  Once they do, start counting time.*/
@@ -293,6 +292,10 @@ int main (int argc, char *argv[]) {
 
       free(final_grid);
   }
+
+  /* Free custom types we have created */
+  MPI_Type_free(&MPI_ROW);
+  MPI_Type_free(&MPI_COLUMN);
 
   /* Free allocated memory */
   for(z=0; z<2; z++){
