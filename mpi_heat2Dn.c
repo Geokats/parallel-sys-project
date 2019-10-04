@@ -173,7 +173,7 @@ int main (int argc, char *argv[]) {
 
   /* Synchronize all tasks by waiting until they all reach this point.
   *  Once they do, start counting time.*/
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_CART_COMM);
   t_start = MPI_Wtime();
 
   /* Begin doing STEPS iterations.  Must communicate border rows with
@@ -188,62 +188,50 @@ int main (int argc, char *argv[]) {
   *  [rows+1][0], [rows+1][columns+1], which are the corners
   *  of the extended grid, are never used. */
 
-  iz = 0;
-
-  for (iz;iz<2;iz++){
+  for (iz=0; iz<2; iz++){
     /* Create persistent communication requests for each neighbor */
-    if (left!=NONE){
-      MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_COMM_WORLD, &(r_array[iz][0]));
-      MPI_Send_init(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_COMM_WORLD, &(s_array[iz][0]));
-    }
-    if (up!=NONE){
-      MPI_Recv_init(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_COMM_WORLD, &(r_array[iz][1]));
-      MPI_Send_init(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_COMM_WORLD, &(s_array[iz][1]));
-    }
-    if (right!=NONE){
-      MPI_Recv_init(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_COMM_WORLD, &(r_array[iz][2]));
-      MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_COMM_WORLD, &(s_array[iz][2])); 
-    }
-    if (down!=NONE){
-      MPI_Recv_init(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_COMM_WORLD, &(r_array[iz][3]));
-      MPI_Send_init(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_COMM_WORLD, &(s_array[iz][3]));
-    }
+      printf("creating persistent left...\n");
+      MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_CART_COMM, &(r_array[iz][0]));
+      MPI_Send_init(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_CART_COMM, &(s_array[iz][0]));
+      printf("creating persistent up...\n");
+      MPI_Recv_init(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_CART_COMM, &(r_array[iz][1]));
+      MPI_Send_init(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_CART_COMM, &(s_array[iz][1]));
+      printf("creating persistent right...\n");
+      MPI_Recv_init(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_CART_COMM, &(r_array[iz][2]));
+      MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_CART_COMM, &(s_array[iz][2])); 
+      printf("creating persistent down...\n");
+      MPI_Recv_init(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_CART_COMM, &(r_array[iz][3]));
+      MPI_Send_init(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_CART_COMM, &(s_array[iz][3]));
   }
+  
+  MPI_Barrier(MPI_CART_COMM);
 
-
+  iz = 0;
   for (it = 1; it <= STEPS; it++) {
-    if (left != NONE) {
+      printf("starting communication left...\n");
       MPI_Start(&r_array[iz][0]);
       MPI_Start(&s_array[iz][0]);
-    }
-    if (up != NONE) {
+      printf("starting communication up...\n");
       MPI_Start(&r_array[iz][1]);
       MPI_Start(&s_array[iz][1]);
-    }
-    if (right != NONE) {
+      printf("starting communication right...\n");
       MPI_Start(&r_array[iz][2]);
       MPI_Start(&s_array[iz][2]);
-    }
-    if (down != NONE) {
+      printf("starting communication down...\n");
       MPI_Start(&r_array[iz][3]);
       MPI_Start(&s_array[iz][3]);
-    }
     /* Now call update to update the value of inner grid points */
     update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
 
     /* Wait for the receives to be over */
-    if (left != NONE) {
-      MPI_Wait(&r_array[iz][0]);
-    }
-    if (up != NONE) {
-      MPI_Wait(&r_array[iz][1]);
-    }
-    if (right != NONE) {
-      MPI_Wait(&r_array[iz][2]);
-    }
-    if (down != NONE) {
-      MPI_Wait(&r_array[iz][3]);
-    }
+      printf("waiting left receive...\n");
+      MPI_Wait(&r_array[iz][0], MPI_STATUS_IGNORE);
+      printf("waiting up receive...\n");
+      MPI_Wait(&r_array[iz][1], MPI_STATUS_IGNORE);
+      printf("waiting right receive...\n");
+      MPI_Wait(&r_array[iz][2], MPI_STATUS_IGNORE);
+      printf("waiting down receive...\n");
+      MPI_Wait(&r_array[iz][3], MPI_STATUS_IGNORE);
     
 
     /* Update the outer values, based on the halos we have by now received*/
@@ -253,18 +241,14 @@ int main (int argc, char *argv[]) {
     update(1, rows, columns, columns, columns, u[iz], u[1-iz]);
 
     /* Wait for the sends to be over */
-    if (left != NONE) {
-      MPI_Wait(&s_array[iz][0]);
-    }
-    if (up != NONE) {
-      MPI_Wait(&s_array[iz][1]);
-    }
-    if (right != NONE) {
-      MPI_Wait(&s_array[iz][2]);
-    }
-    if (down != NONE) {
-      MPI_Wait(&s_array[iz][3]);
-    }
+      printf("waiting left send...\n");
+      MPI_Wait(&s_array[iz][0], MPI_STATUS_IGNORE);
+      printf("waiting up send...\n");
+      MPI_Wait(&s_array[iz][1], MPI_STATUS_IGNORE);
+      printf("waiting right send...\n");
+      MPI_Wait(&s_array[iz][2], MPI_STATUS_IGNORE);
+      printf("waiting down send...\n");
+      MPI_Wait(&s_array[iz][3], MPI_STATUS_IGNORE);
 
     iz = 1 - iz;
   }
