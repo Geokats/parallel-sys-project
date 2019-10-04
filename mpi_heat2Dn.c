@@ -292,7 +292,7 @@ int main (int argc, char *argv[]) {
   row_size = (sizeof(float)+sizeof(char)) * ave_column;
   prev_output = output_size * coord[0];
 
-  rc = MPI_File_open(MPI_COMM_WORLD,"mpiheatout",MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &file);
+  rc = MPI_File_open(MPI_COMM_WORLD,"mpiheatout", MPI_MODE_CREATE | MPI_MODE_WRONLY , MPI_INFO_NULL, &file);
   
   for (k=0;k<rows;k++){
     prev_output = prev_output + row_size * coord[1];
@@ -310,7 +310,7 @@ int main (int argc, char *argv[]) {
     }
     
   }
-
+  MPI_File_close(&file);
 
 
   /* Free the requests allocated*/
