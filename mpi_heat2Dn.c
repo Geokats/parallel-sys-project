@@ -29,7 +29,7 @@
 
 #define NXPROB      80                 /* x dimension of problem grid */
 #define NYPROB      64                 /* y dimension of problem grid */
-#define STEPS       100                /* number of time steps */
+#define STEPS       500                /* number of time steps */
 #define MAXWORKER   160                /* maximum number of worker tasks */
 #define MINWORKER   1                  /* minimum number of worker tasks */
 #define BEGIN       1                  /* message tag */
