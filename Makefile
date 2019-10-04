@@ -1,3 +1,5 @@
+SHELL=/bin/bash
+
 # the compiler
 CC = mpicc
 
