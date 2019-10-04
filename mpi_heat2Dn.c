@@ -124,13 +124,13 @@ int main (int argc, char *argv[]) {
   * the topology grid. We only have to find the size of each worker's grid so
   * that all the wokrers' grid combined are equal to the initial grid's size. */
 
-  ave_row = NXPROB/cart_dims[0];
-  extra_row = NXPROB%cart_dims[0];
-  rows = (coord[0] == cart_dims[0] - 1) ? ave_row + extra_row : ave_row;
+  ave_row = NXPROB/cart_dims[1];
+  extra_row = NXPROB%cart_dims[1];
+  rows = (coord[1] == cart_dims[1] - 1) ? ave_row + extra_row : ave_row;
 
-  ave_column = NYPROB/cart_dims[1];
-  extra_column = NYPROB%cart_dims[1];
-  columns = (coord[1] == cart_dims[1] - 1) ? ave_column + extra_column : ave_column;
+  ave_column = NYPROB/cart_dims[0];
+  extra_column = NYPROB%cart_dims[0];
+  columns = (coord[0] == cart_dims[0] - 1) ? ave_column + extra_column : ave_column;
 
   printf("Process #%d gets a %d x %d grid (%d x %d including the halo)\n", taskid, rows, columns, rows+2, columns+2);
 
@@ -166,8 +166,8 @@ int main (int argc, char *argv[]) {
   * is 1 block between the starts of each block in our table.
   * A column has <row-size> blocks each of which contain 1 MPI_DOUBLE and
   * there are <row-size> blocks between the start of each block in our table. */
-  MPI_Type_vector(columns, 1, 1, MPI_DOUBLE, &MPI_ROW);
-  MPI_Type_vector(rows, 1, rows, MPI_DOUBLE , &MPI_COLUMN);
+  MPI_Type_vector(columns, 1, 1, MPI_FLOAT, &MPI_ROW);
+  MPI_Type_vector(rows, 1, columns+2, MPI_FLOAT , &MPI_COLUMN);
   MPI_Type_commit(&MPI_ROW);
   MPI_Type_commit(&MPI_COLUMN);
 
@@ -209,47 +209,65 @@ int main (int argc, char *argv[]) {
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
     /* Request and send data to left neighbor */
+    printf("[P%03d:%s] Starting communication with left neighbor\n", taskid, p_name);
     MPI_Start(&r_array[iz][0]);
     MPI_Start(&s_array[iz][0]);
     /* Request and send data to up neighbor */
+    printf("[P%03d:%s] Starting communication with up neighbor\n", taskid, p_name);
     MPI_Start(&r_array[iz][1]);
     MPI_Start(&s_array[iz][1]);
     /* Request and send data to right neighbor */
+    printf("[P%03d:%s] Starting communication with right neighbor\n", taskid, p_name);
     MPI_Start(&r_array[iz][2]);
     MPI_Start(&s_array[iz][2]);
     /* Request and send data to down neighbor */
+    printf("[P%03d:%s] Starting communication with down neighbor\n", taskid, p_name);
     MPI_Start(&r_array[iz][3]);
     MPI_Start(&s_array[iz][3]);
 
     /* Now call update to update the value of inner grid points */
+    printf("[P%03d:%s] Updating inner values\n", taskid, p_name);
     update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
 
     /* Wait to receive data from left neighbor */
+    printf("[P%03d:%s] Waiting for receive from left neighbor\n", taskid, p_name);
     MPI_Wait(&r_array[iz][0], MPI_STATUS_IGNORE);
     /* Wait to receive data from up neighbor */
+    printf("[P%03d:%s] Waiting for receive from up neighbor\n", taskid, p_name);
     MPI_Wait(&r_array[iz][1], MPI_STATUS_IGNORE);
     /* Wait to receive data from right neighbor */
+    printf("[P%03d:%s] Waiting for receive from right neighbor\n", taskid, p_name);
     MPI_Wait(&r_array[iz][2], MPI_STATUS_IGNORE);
     /* Wait to receive data from down neighbor */
+    printf("[P%03d:%s] Waiting for receive from down neighbor\n", taskid, p_name);
     MPI_Wait(&r_array[iz][3], MPI_STATUS_IGNORE);
 
     /* Update the outer values, based on the halos we have by now received*/
-    update(1, 1, 1, columns, columns, u[iz], u[1-iz]);
-    update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);
-    update(1, rows, 1, 1, columns, u[iz], u[1-iz]);
-    update(1, rows, columns, columns, columns, u[iz], u[1-iz]);
+    printf("[P%03d:%s] Updating up row\n", taskid, p_name);
+    update(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
+    printf("[P%03d:%s] Updating down row\n", taskid, p_name);
+    update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
+    printf("[P%03d:%s] Updating left column\n", taskid, p_name);
+    update(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
+    printf("[P%03d:%s] Updating right column\n", taskid, p_name);
+    update(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
 
     /* Wait for data to be sent to left neighbor */
+    printf("[P%03d:%s] Waiting for send to left neighbor\n", taskid, p_name);
     MPI_Wait(&s_array[iz][0], MPI_STATUS_IGNORE);
     /* Wait for data to be sent to up neighbor */
+    printf("[P%03d:%s] Waiting for send to up neighbor\n", taskid, p_name);
     MPI_Wait(&s_array[iz][1], MPI_STATUS_IGNORE);
     /* Wait for data to be sent to right neighbor */
+    printf("[P%03d:%s] Waiting for send to right neighbor\n", taskid, p_name);
     MPI_Wait(&s_array[iz][2], MPI_STATUS_IGNORE);
     /* Wait for data to be sent to down neighbor */
+    printf("[P%03d:%s] Waiting for send to down neighbor\n", taskid, p_name);
     MPI_Wait(&s_array[iz][3], MPI_STATUS_IGNORE);
 
     iz = 1 - iz;
   }
+  printf("[P%03d:%s] Finished time steps\n", taskid, p_name);
 
   /* Calculate the total time this process has run */
   t_end = MPI_Wtime();
