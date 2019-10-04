@@ -75,6 +75,7 @@ int main (int argc, char *argv[]) {
   MPI_Request s_array[2][4];              /* Handles for sending information */
   double t_start, t_end, t_run,           /* Count the time before and after calculations*/
          t_max, t_avg;                    /* Max and average time between all processes */
+  int conv_local, conv_total;             /* If there are no changes in the local table, and in all processes */
 
 
   /* First, find out my taskid and how many tasks are running */
