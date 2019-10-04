@@ -59,7 +59,7 @@ int main (int argc, char *argv[]) {
 	int left,right,up,down;                 /* neighbor tasks */
 	int msgtype;                            /* for message types */
 	int rc;                                 /* misc */
-	int i,j,z,ix,iy,iz,it;                  /* loop variables */
+	int i,j,k,z,ix,iy,iz,it;                /* loop variables */
   MPI_Status status;
   MPI_Datatype MPI_ROW, MPI_COLUMN;       /* datatypes used for efficient data transfers between workers */
   MPI_Comm MPI_CART_COMM;                 /* Cartesian Communication World */
@@ -72,8 +72,12 @@ int main (int argc, char *argv[]) {
   int p_name_len;                         /* Processor name length */
   MPI_Request r_array[2][4];              /* Handles for receiving information */
   MPI_Request s_array[2][4];              /* Handles for sending information */
-  double t_start, t_end, t_run,           /* Count the time before and after calculations*/
+  double t_start, t_end, t_run,           /* Count the time before and after calculations */
          t_max, t_avg;                    /* Max and average time between all processes */
+  int rc;                                 /* File opening error handle */
+  MPI_File out_file;                      /* File pointer */
+  int output_size,prev_output;            /* Offsets for printing in file */
+  char space=' ',newl='\n';
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -250,7 +254,7 @@ int main (int argc, char *argv[]) {
 
     iz = 1 - iz;
   }
-
+  iz = 1 - iz; //cancel out the last change
   /* Calculate the total time this process has run */
   t_end = MPI_Wtime();
   t_run = t_end - t_start;
@@ -281,6 +285,33 @@ int main (int argc, char *argv[]) {
     printf("Click on MORE button to view initial/final states.\n");
     printf("Click on EXIT button to quit program.\n");
   }
+
+  /* Start parallel output */
+
+  output_size = (sizeof(float) + sizeof(char)) * (ave_row * ave_column);
+  row_size = (sizeof(float)+sizeof(char)) * ave_column;
+  prev_output = output_size * coord[0];
+
+  rc = MPI_File_open(MPI_COMM_WORLD,"mpiheatout",MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &file);
+  
+  for (k=0;k<rows;k++){
+    prev_output = prev_output + row_size * coord[1];
+    MPI_File_set_view(file,prev_output,MPI_FLOAT,MPI_FLOAT,"native", MPI_INFO_NULL);
+    for (j=0;j<=columns;j++){
+      MPI_File_write(file,u[iz][k][j],1,MPI_FLOAT,MPI_STATUS_IGNORE);
+      if((coord[1]!=cart_dims[1]-1) || (j!=columns))
+      {
+        MPI_File_write(file,&space,1,MPI_CHAR,MPI_STATUS_IGNORE);
+      }
+      else
+      {
+        MPI_File_write(file,&newl,1,MPI_CHAR,MPI_STATUS_IGNORE);
+      }
+    }
+    
+  }
+
+
 
   /* Free the requests allocated*/
   for (iz=0;iz<2;iz++){
