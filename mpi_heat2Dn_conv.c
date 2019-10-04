@@ -75,7 +75,7 @@ int main (int argc, char *argv[]) {
   MPI_Request s_array[2][4];              /* Handles for sending information */
   double t_start, t_end, t_run,           /* Count the time before and after calculations*/
          t_max, t_avg;                    /* Max and average time between all processes */
-  int conv_local, conv_total;             /* If there are no changes in the local table, and in all processes */
+int conv_local, conv_total;             /* If there are no changes in the local table, and in all processes */
 
 
   /* First, find out my taskid and how many tasks are running */
@@ -210,6 +210,7 @@ int main (int argc, char *argv[]) {
 
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
+    conv_local = 1;
     /* Request and send data to left neighbor */
 
     MPI_Start(&r_array[iz][0]);
@@ -229,7 +230,12 @@ int main (int argc, char *argv[]) {
 
     /* Now call update to update the value of inner grid points */
 
-    update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+    if(it % CONV_PERIOD == 0){
+      conv_local &= update_check_conv(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+    }
+    else{
+      update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+    }
 
     /* Wait to receive data from left neighbor */
 
@@ -245,10 +251,18 @@ int main (int argc, char *argv[]) {
     MPI_Wait(&r_array[iz][3], MPI_STATUS_IGNORE);
 
     /* Update the outer values, based on the halos we have by now received*/
-    update(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
-    update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
-    update(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
-    update(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
+    if(it % CONV_PERIOD == 0){
+      conv_local &= update_check_conv(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
+      conv_local &= update_check_conv(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
+      conv_local &= update_check_conv(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
+      conv_local &= update_check_conv(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
+    }
+    else{
+      update(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
+      update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
+      update(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
+      update(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
+    }
 
     /* Wait for data to be sent to left neighbor */
     MPI_Wait(&s_array[iz][0], MPI_STATUS_IGNORE);
@@ -261,7 +275,6 @@ int main (int argc, char *argv[]) {
 
     /* Check for convergence after every <CONV_PERIOD> iterations */
     if(it % CONV_PERIOD == 0){
-      conv_local = converge(rows, columns, u);
       MPI_Allreduce(&conv_local, &conv_total, 1, MPI_INT, MPI_LAND, MPI_CART_COMM);
       if(conv_total){
         /* In reality we would stop here but for this project we don't stop so
@@ -339,6 +352,24 @@ void update(int x_start, int x_end, int y_start, int y_end,int ny, float **u1, f
                  + parms.cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2.0 * u1[ix][iy] );
     }
   }
+}
+
+/************************* subroutine update_check_conv ***********************/
+int update_check_conv(int x_start, int x_end, int y_start, int y_end,int ny, float **u1, float **u2) {
+  int ix, iy;
+  int conv = 1;
+
+  for (ix = x_start; ix <= x_end; ix++){
+    for (iy = y_start; iy <= y_end; iy++){
+      u2[ix][iy] = u1[ix][iy]
+                 + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
+                 + parms.cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2.0 * u1[ix][iy] );
+      if(u2[ix][iy] != u1[ix][iy]){
+        conv = 0;
+      }
+    }
+  }
+  return conv;
 }
 
 /****************************** subroutine inidat *****************************/
