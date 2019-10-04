@@ -188,51 +188,50 @@ int main (int argc, char *argv[]) {
   *  [rows+1][0], [rows+1][columns+1], which are the corners
   *  of the extended grid, are never used. */
 
+  /* Create persistent communication requests for each neighbor */
   for (iz=0; iz<2; iz++){
-    /* Create persistent communication requests for each neighbor */
-      printf("creating persistent left...\n");
-      MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_CART_COMM, &(r_array[iz][0]));
-      MPI_Send_init(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_CART_COMM, &(s_array[iz][0]));
-      printf("creating persistent up...\n");
-      MPI_Recv_init(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_CART_COMM, &(r_array[iz][1]));
-      MPI_Send_init(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_CART_COMM, &(s_array[iz][1]));
-      printf("creating persistent right...\n");
-      MPI_Recv_init(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_CART_COMM, &(r_array[iz][2]));
-      MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_CART_COMM, &(s_array[iz][2])); 
-      printf("creating persistent down...\n");
-      MPI_Recv_init(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_CART_COMM, &(r_array[iz][3]));
-      MPI_Send_init(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_CART_COMM, &(s_array[iz][3]));
+    /* Creating persistent communication with left neighbor */
+    MPI_Recv_init(&u[iz][1][0], 1, MPI_COLUMN, left, LTAG, MPI_CART_COMM, &(r_array[iz][0]));
+    MPI_Send_init(&u[iz][1][1], 1, MPI_COLUMN, left, RTAG, MPI_CART_COMM, &(s_array[iz][0]));
+    /* Creating persistent communication with up neighbor */
+    MPI_Recv_init(&u[iz][0][1], 1, MPI_ROW, up, UTAG, MPI_CART_COMM, &(r_array[iz][1]));
+    MPI_Send_init(&u[iz][1][1], 1, MPI_ROW, up, DTAG, MPI_CART_COMM, &(s_array[iz][1]));
+    /* Creating persistent communication with right neighbor */
+    MPI_Recv_init(&u[iz][1][columns+1], 1, MPI_COLUMN, right, RTAG, MPI_CART_COMM, &(r_array[iz][2]));
+    MPI_Send_init(&u[iz][1][columns], 1, MPI_COLUMN, right, LTAG, MPI_CART_COMM, &(s_array[iz][2]));
+    /* Creating persistent communication with down neighbor */
+    MPI_Recv_init(&u[iz][rows+1][1], 1, MPI_ROW, down, DTAG, MPI_CART_COMM, &(r_array[iz][3]));
+    MPI_Send_init(&u[iz][rows][1], 1, MPI_ROW, down, UTAG, MPI_CART_COMM, &(s_array[iz][3]));
   }
-  
+
   MPI_Barrier(MPI_CART_COMM);
 
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
-      printf("starting communication left...\n");
-      MPI_Start(&r_array[iz][0]);
-      MPI_Start(&s_array[iz][0]);
-      printf("starting communication up...\n");
-      MPI_Start(&r_array[iz][1]);
-      MPI_Start(&s_array[iz][1]);
-      printf("starting communication right...\n");
-      MPI_Start(&r_array[iz][2]);
-      MPI_Start(&s_array[iz][2]);
-      printf("starting communication down...\n");
-      MPI_Start(&r_array[iz][3]);
-      MPI_Start(&s_array[iz][3]);
+    /* Request and send data to left neighbor */
+    MPI_Start(&r_array[iz][0]);
+    MPI_Start(&s_array[iz][0]);
+    /* Request and send data to up neighbor */
+    MPI_Start(&r_array[iz][1]);
+    MPI_Start(&s_array[iz][1]);
+    /* Request and send data to right neighbor */
+    MPI_Start(&r_array[iz][2]);
+    MPI_Start(&s_array[iz][2]);
+    /* Request and send data to down neighbor */
+    MPI_Start(&r_array[iz][3]);
+    MPI_Start(&s_array[iz][3]);
+
     /* Now call update to update the value of inner grid points */
     update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
 
-    /* Wait for the receives to be over */
-      printf("waiting left receive...\n");
-      MPI_Wait(&r_array[iz][0], MPI_STATUS_IGNORE);
-      printf("waiting up receive...\n");
-      MPI_Wait(&r_array[iz][1], MPI_STATUS_IGNORE);
-      printf("waiting right receive...\n");
-      MPI_Wait(&r_array[iz][2], MPI_STATUS_IGNORE);
-      printf("waiting down receive...\n");
-      MPI_Wait(&r_array[iz][3], MPI_STATUS_IGNORE);
-    
+    /* Wait to receive data from left neighbor */
+    MPI_Wait(&r_array[iz][0], MPI_STATUS_IGNORE);
+    /* Wait to receive data from up neighbor */
+    MPI_Wait(&r_array[iz][1], MPI_STATUS_IGNORE);
+    /* Wait to receive data from right neighbor */
+    MPI_Wait(&r_array[iz][2], MPI_STATUS_IGNORE);
+    /* Wait to receive data from down neighbor */
+    MPI_Wait(&r_array[iz][3], MPI_STATUS_IGNORE);
 
     /* Update the outer values, based on the halos we have by now received*/
     update(1, 1, 1, columns, columns, u[iz], u[1-iz]);
@@ -240,37 +239,16 @@ int main (int argc, char *argv[]) {
     update(1, rows, 1, 1, columns, u[iz], u[1-iz]);
     update(1, rows, columns, columns, columns, u[iz], u[1-iz]);
 
-    /* Wait for the sends to be over */
-      printf("waiting left send...\n");
-      MPI_Wait(&s_array[iz][0], MPI_STATUS_IGNORE);
-      printf("waiting up send...\n");
-      MPI_Wait(&s_array[iz][1], MPI_STATUS_IGNORE);
-      printf("waiting right send...\n");
-      MPI_Wait(&s_array[iz][2], MPI_STATUS_IGNORE);
-      printf("waiting down send...\n");
-      MPI_Wait(&s_array[iz][3], MPI_STATUS_IGNORE);
+    /* Wait for data to be sent to left neighbor */
+    MPI_Wait(&s_array[iz][0], MPI_STATUS_IGNORE);
+    /* Wait for data to be sent to up neighbor */
+    MPI_Wait(&s_array[iz][1], MPI_STATUS_IGNORE);
+    /* Wait for data to be sent to right neighbor */
+    MPI_Wait(&s_array[iz][2], MPI_STATUS_IGNORE);
+    /* Wait for data to be sent to down neighbor */
+    MPI_Wait(&s_array[iz][3], MPI_STATUS_IGNORE);
 
     iz = 1 - iz;
-  }
-
-  for (iz=0;iz<2;iz++){
-  /* Free the requests allocated*/
-    if (left!=NONE){
-      MPI_Request_free(&(r_array[iz][0]));
-      MPI_Request_free(&(s_array[iz][0]));
-    }
-    if (up!=NONE){
-      MPI_Request_free(&(r_array[iz][1]));
-      MPI_Request_free(&(s_array[iz][1]));
-    }
-    if (right!=NONE){
-      MPI_Request_free(&(r_array[iz][2]));
-      MPI_Request_free(&(s_array[iz][2]));
-    }
-    if (down!=NONE){
-      MPI_Request_free(&(r_array[iz][3]));
-      MPI_Request_free(&(s_array[iz][3]));
-    }
   }
 
   /* Calculate the total time this process has run */
@@ -297,26 +275,23 @@ int main (int argc, char *argv[]) {
     // MPI_Send(&u[iz][offset][0], rows*columns, MPI_FLOAT, MASTER, DONE, MPI_COMM_WORLD);
   }
   else{
-      /*Allocate memory to gather all grids together*/
-      for (i=0;i<NYPROB;i++)
-      {
-        final_grid = malloc((NXPROB*NYPROB)*sizeof(float*));
-      }
-      /* Now wait for results from all worker tasks */
-      for (i=1; i<=numtasks; i++) {
-        source = i;
-        msgtype = DONE;
-        // MPI_Recv(&offset, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-        // MPI_Recv(&rows, 1, MPI_INT, source, msgtype, MPI_COMM_WORLD, &status);
-        // MPI_Recv(&final_grid[offset_row][0], rows*NYPROB, MPI_FLOAT, source, msgtype, MPI_COMM_WORLD, &status);
-      }
-      /* Write final output, call X graph and finalize MPI */
-      printf("Writing final.dat file and generating graph...\n");
-      //prtdat(NXPROB, NYPROB, &final_grid, "final.dat");
-      printf("Click on MORE button to view initial/final states.\n");
-      printf("Click on EXIT button to quit program.\n");
+    /* Write final output, call X graph and finalize MPI */
+    printf("Writing final.dat file and generating graph...\n");
+    //prtdat(NXPROB, NYPROB, &final_grid, "final.dat");
+    printf("Click on MORE button to view initial/final states.\n");
+    printf("Click on EXIT button to quit program.\n");
+  }
 
-      free(final_grid);
+  /* Free the requests allocated*/
+  for (iz=0;iz<2;iz++){
+    MPI_Request_free(&(r_array[iz][0]));
+    MPI_Request_free(&(s_array[iz][0]));
+    MPI_Request_free(&(r_array[iz][1]));
+    MPI_Request_free(&(s_array[iz][1]));
+    MPI_Request_free(&(r_array[iz][2]));
+    MPI_Request_free(&(s_array[iz][2]));
+    MPI_Request_free(&(r_array[iz][3]));
+    MPI_Request_free(&(s_array[iz][3]));
   }
 
   /* Free custom types we have created */
