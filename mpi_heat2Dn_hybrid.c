@@ -76,16 +76,12 @@ int main (int argc, char *argv[]) {
   double t_start, t_end, t_run,           /* Count the time before and after calculations*/
          t_max, t_avg;                    /* Max and average time between all processes */
   int conv_local, conv_total;             /* If there are no changes in the local table, and in all processes */
-  int thread_count;                       /* Number of threads to create */
 
 
   /* First, find out my taskid and how many tasks are running */
   MPI_Init(&argc,&argv);
   MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
-
-  /* Read number of threads from command line arguments */
-  thread_count = atoi(argv[1]);
 
   if (taskid == 0) {
     /* Check if numtasks is within range - quit if not */
@@ -95,7 +91,7 @@ int main (int argc, char *argv[]) {
       MPI_Abort(MPI_COMM_WORLD, rc);
       exit(1);
     }
-    printf ("Starting mpi_heat2D with %d worker tasks and %d threads.\n", numtasks, thread_count);
+    printf ("Starting mpi_heat2D with %d worker tasks.\n", numtasks);
 
     printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
     printf("Initializing grid and writing initial.dat file...\n");
@@ -212,7 +208,7 @@ int main (int argc, char *argv[]) {
 
   MPI_Barrier(MPI_CART_COMM);
 
-  #pragma omp parallel numthreads(thread_count)
+  #pragma omp parallel numthreads(OMP_NUM_THREADS)
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
     conv_local = 1;
