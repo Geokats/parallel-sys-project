@@ -346,9 +346,8 @@ int main (int argc, char *argv[]) {
 /****************************** subroutine update *****************************/
 void update(int x_start, int x_end, int y_start, int y_end,int ny, float **u1, float **u2) {
   int ix, iy;
-  #pragma omp for schedule(static, 4)
+  #pragma omp for schedule(static, 4) collapse(2)
   for (ix = x_start; ix <= x_end; ix++){
-    #pragma omp for schedule(static, 4)
     for (iy = y_start; iy <= y_end; iy++){
       u2[ix][iy] = u1[ix][iy]
                  + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
@@ -361,9 +360,8 @@ int update_check_conv(int x_start, int x_end, int y_start, int y_end,int ny, flo
   int ix, iy;
   int conv = 1;
 
-  #pragma omp for schedule(static, 4)
+  #pragma omp for schedule(static, 4) collapse(2)
   for (ix = x_start; ix <= x_end; ix++){
-    #pragma omp for schedule(static, 4)
     for (iy = y_start; iy <= y_end; iy++){
       u2[ix][iy] = u1[ix][iy]
                  + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
