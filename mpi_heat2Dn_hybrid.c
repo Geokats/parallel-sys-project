@@ -234,9 +234,9 @@ int main (int argc, char *argv[]) {
     if(it % CONV_PERIOD == 0){
       // conv_local &= update_check_conv(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
       #pragma omp for schedule(static, 4)
-      for (ix = x_start; ix <= x_end; ix++){
+      for (ix = 2; ix <= rows-1; ix++){
         #pragma omp for schedule(static, 4) reduction(&: conv)
-        for (iy = y_start; iy <= y_end; iy++){
+        for (iy = 2; iy <= columns-1; iy++){
           u2[ix][iy] = u1[ix][iy]
                      + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
                      + parms.cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2.0 * u1[ix][iy] );
