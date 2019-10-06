@@ -40,6 +40,7 @@
 #define NONE        0                  /* indicates no neighbor */
 #define DONE        4                  /* message tag */
 #define MASTER      0                  /* taskid of first process */
+#define CONV_PERIOD 10                 /* every how many time steps to check for convergence */
 
 struct Parms {
   float cx;
@@ -74,12 +75,17 @@ int main (int argc, char *argv[]) {
   MPI_Request s_array[2][4];              /* Handles for sending information */
   double t_start, t_end, t_run,           /* Count the time before and after calculations*/
          t_max, t_avg;                    /* Max and average time between all processes */
+  int conv_local, conv_total;             /* If there are no changes in the local table, and in all processes */
+  int thread_count;                       /* Number of threads to create */
 
 
   /* First, find out my taskid and how many tasks are running */
   MPI_Init(&argc,&argv);
   MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
   MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
+
+  /* Read number of threads from command line arguments */
+  thread_count = atoi(argv[1]);
 
   if (taskid == 0) {
     /* Check if numtasks is within range - quit if not */
@@ -89,7 +95,7 @@ int main (int argc, char *argv[]) {
       MPI_Abort(MPI_COMM_WORLD, rc);
       exit(1);
     }
-    printf ("Starting mpi_heat2D with %d worker tasks.\n", numtasks);
+    printf ("Starting mpi_heat2D with %d worker tasks and %d threads.\n", numtasks, thread_count);
 
     printf("Grid size: X= %d  Y= %d  Time steps= %d\n", NXPROB, NYPROB, STEPS);
     printf("Initializing grid and writing initial.dat file...\n");
@@ -206,8 +212,10 @@ int main (int argc, char *argv[]) {
 
   MPI_Barrier(MPI_CART_COMM);
 
+  #pragma omp parallel numthreads(thread_count)
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
+    conv_local = 1;
     /* Request and send data to left neighbor */
 
     MPI_Start(&r_array[iz][0]);
@@ -227,7 +235,12 @@ int main (int argc, char *argv[]) {
 
     /* Now call update to update the value of inner grid points */
 
-    update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+    if(it % CONV_PERIOD == 0){
+      conv_local &= update_check_conv(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+    }
+    else{
+      update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+    }
 
     /* Wait to receive data from left neighbor */
 
@@ -243,10 +256,18 @@ int main (int argc, char *argv[]) {
     MPI_Wait(&r_array[iz][3], MPI_STATUS_IGNORE);
 
     /* Update the outer values, based on the halos we have by now received*/
-    update(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
-    update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
-    update(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
-    update(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
+    if(it % CONV_PERIOD == 0){
+      conv_local &= update_check_conv(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
+      conv_local &= update_check_conv(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
+      conv_local &= update_check_conv(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
+      conv_local &= update_check_conv(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
+    }
+    else{
+      update(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
+      update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
+      update(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
+      update(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
+    }
 
     /* Wait for data to be sent to left neighbor */
     MPI_Wait(&s_array[iz][0], MPI_STATUS_IGNORE);
@@ -256,6 +277,15 @@ int main (int argc, char *argv[]) {
     MPI_Wait(&s_array[iz][2], MPI_STATUS_IGNORE);
     /* Wait for data to be sent to down neighbor */
     MPI_Wait(&s_array[iz][3], MPI_STATUS_IGNORE);
+
+    /* Check for convergence after every <CONV_PERIOD> iterations */
+    if(it % CONV_PERIOD == 0){
+      MPI_Allreduce(&conv_local, &conv_total, 1, MPI_INT, MPI_LAND, MPI_CART_COMM);
+      if(conv_total){
+        /* In reality we would stop here but for this project we don't stop so
+        * that all test have the same number of iterations. */
+      }
+    }
 
     iz = 1 - iz;
   }
@@ -320,15 +350,34 @@ int main (int argc, char *argv[]) {
 /****************************** subroutine update *****************************/
 void update(int x_start, int x_end, int y_start, int y_end,int ny, float **u1, float **u2) {
   int ix, iy;
-  #pragma parallel omp for schedule(dynamic,1)
+  #pragma omp for schedule(static, 4)
   for (ix = x_start; ix <= x_end; ix++){
-    #pragma parallel omp for schedule(dynamic,1)
+    #pragma omp for schedule(static, 4)
     for (iy = y_start; iy <= y_end; iy++){
       u2[ix][iy] = u1[ix][iy]
                  + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
                  + parms.cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2.0 * u1[ix][iy] );
     }
   }
+}
+
+int update_check_conv(int x_start, int x_end, int y_start, int y_end,int ny, float **u1, float **u2) {
+  int ix, iy;
+  int conv = 1;
+
+  #pragma omp for schedule(static, 4) reduction(&: conv)
+  for (ix = x_start; ix <= x_end; ix++){
+    #pragma omp for schedule(static, 4)
+    for (iy = y_start; iy <= y_end; iy++){
+      u2[ix][iy] = u1[ix][iy]
+                 + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
+                 + parms.cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2.0 * u1[ix][iy] );
+      if(u2[ix][iy] != u1[ix][iy]){
+        conv = 0;
+      }
+    }
+  }
+  return conv;
 }
 
 /****************************** subroutine inidat *****************************/
