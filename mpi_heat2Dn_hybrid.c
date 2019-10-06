@@ -208,7 +208,7 @@ int main (int argc, char *argv[]) {
 
   MPI_Barrier(MPI_CART_COMM);
 
-  #pragma omp parallel num_threads(OMP_NUM_THREADS)
+  #pragma omp parallel
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
     conv_local = 1;
@@ -232,10 +232,22 @@ int main (int argc, char *argv[]) {
     /* Now call update to update the value of inner grid points */
 
     if(it % CONV_PERIOD == 0){
-      conv_local &= update_check_conv(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+      // conv_local &= update_check_conv(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+      #pragma omp for schedule(static, 4)
+      for (ix = x_start; ix <= x_end; ix++){
+        #pragma omp for schedule(static, 4) reduction(&: conv)
+        for (iy = y_start; iy <= y_end; iy++){
+          u2[ix][iy] = u1[ix][iy]
+                     + parms.cx * ( u1[ix+1][iy] + u1[ix-1][iy] - 2.0 * u1[ix][iy] )
+                     + parms.cy * ( u1[ix][iy+1] + u1[ix][iy-1] - 2.0 * u1[ix][iy] );
+          if(u2[ix][iy] != u1[ix][iy]){
+            conv = 0;
+          }
+        }
+      }
     }
     else{
-      update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
+      // update(2, rows-1, 2, columns-1, columns, u[iz], u[1-iz]);
     }
 
     /* Wait to receive data from left neighbor */
@@ -253,16 +265,16 @@ int main (int argc, char *argv[]) {
 
     /* Update the outer values, based on the halos we have by now received*/
     if(it % CONV_PERIOD == 0){
-      conv_local &= update_check_conv(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
-      conv_local &= update_check_conv(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
-      conv_local &= update_check_conv(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
-      conv_local &= update_check_conv(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
+      // conv_local &= update_check_conv(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
+      // conv_local &= update_check_conv(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
+      // conv_local &= update_check_conv(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
+      // conv_local &= update_check_conv(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
     }
     else{
-      update(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
-      update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
-      update(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
-      update(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
+      // update(1, 1, 1, columns, columns, u[iz], u[1-iz]);          //up
+      // update(rows, rows, 1, columns, columns, u[iz], u[1-iz]);    //down
+      // update(1, rows, 1, 1, columns, u[iz], u[1-iz]);             //left
+      // update(1, rows, columns, columns, columns, u[iz], u[1-iz]); //right
     }
 
     /* Wait for data to be sent to left neighbor */
