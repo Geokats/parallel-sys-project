@@ -208,7 +208,7 @@ int main (int argc, char *argv[]) {
 
   MPI_Barrier(MPI_CART_COMM);
 
-  #pragma omp parallel numthreads(OMP_NUM_THREADS)
+  #pragma omp parallel num_threads(OMP_NUM_THREADS)
   iz = 0;
   for (it = 1; it <= STEPS; it++) {
     conv_local = 1;
@@ -361,7 +361,7 @@ int update_check_conv(int x_start, int x_end, int y_start, int y_end,int ny, flo
   int ix, iy;
   int conv = 1;
 
-  #pragma omp for schedule(static, 4) reduction(&: conv)
+  #pragma omp for schedule(static, 4) reduction(&: conv) private(conv)
   for (ix = x_start; ix <= x_end; ix++){
     #pragma omp for schedule(static, 4)
     for (iy = y_start; iy <= y_end; iy++){
