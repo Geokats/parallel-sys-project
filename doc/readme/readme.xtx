@@ -249,16 +249,49 @@ the values of the neighboring grid points.
 \section{Βελτιωμένο Πρόγραμμα MPI}
 \subsection{Γενικά}
 \subsection{Ανάλυση Βελτιώσεων}
+\subsubsection{Διαμοιρασμός σε 2 Διαστάσεις}
+Χήρας
+\subsubsection{Άλω Εξωτερικών Σημείων}
+Xήρας
+\subsubsection{Workflow Επικοινωνιών - Υπολογισμός}
+Χήρας
+\subsubsection{Πρώτα Receive - Μετά Send}
+Χήρας
+\subsubsection{Datatypes Σειρών - Στηλών}
+Κάτσο
+\subsubsection{Υπολογισμός Γειτόνων}
+Κάτσο
+\subsubsection{Αποφυγή Ifs για Επικοινωνίες Γειτόνων}
+Κάτσο
+\subsubsection{Γείτονες σε ίδιο κόμβο}
+Κάτσο
+\subsubsection{Persisten Communication}
+Χήρας
+\subsubsection{Δυναμικοί Πίνακες}
+Χήρας
+\subsubsection{11 ???}
+
+\subsubsection{Compile με -Ο3}
+Χήρας
+Χρειάζεται να μπει εδώ; Το αναφέρω στη μετταγλώτιση
+
 \subsection{Χρόνοι}
+Κάτσο
 
 \section{Βελτιωμένο Πρόγραμμα MPI με Σύγκλιση}
 \subsection{Γενικά}
+Κάτσο
 \subsection{Ανάλυση Βελτιώσεων}
+Κάτσο
 \subsection{Χρόνοι}
+Κάτσο
 
 \section{Βελτιωμένο Υβριδικό Πρόγραμμα MPI \& OpenMP με Σύγκλιση}
 \subsection{Γενικά}
+Κάτσο
 \subsection{Ανάλυση Βελτιώσεων}
+Κάτσο
 \subsection{Χρόνοι}
+Κάτσο
 
 \end{document}
