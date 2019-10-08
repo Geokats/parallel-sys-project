@@ -276,7 +276,7 @@ Xήρας
 Χρειάζεται να μπει εδώ; Το αναφέρω στη μετταγλώτιση
 
 \subsection{Χρόνοι}
-\begin{table}[h]
+\begin{table}[h!]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -291,11 +291,11 @@ Xήρας
 	\label{mpi:table:times}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[h!]
 	\centering
 
 	\begin{tikzpicture}
-		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Time (seconds)}, width=\textwidth, height=0.7\textheight, ymin=0, ymax=10]
+		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Time (seconds)}, width=0.7\textwidth, height=0.4\textheight, ymin=0, ymax=10]
 			\addplot table [x=tasks, y=80x64, col sep=comma] {times/mpi_times.csv};
 			\addplot table [x=tasks, y=160x128, col sep=comma] {times/mpi_times.csv};
 			\addplot table [x=tasks, y=320x256, col sep=comma] {times/mpi_times.csv};
@@ -312,7 +312,7 @@ Xήρας
 \end{figure}
 
 \subsection{Speed-up}
-\begin{table}[h]
+\begin{table}[h!]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -327,11 +327,11 @@ Xήρας
 	\label{mpi:table:speedup}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[h!]
 	\centering
 
 	\begin{tikzpicture}
-		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Speed-up}, width=\textwidth, height=0.7\textheight, ymin=0	]
+		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Speed-up}, width=0.7\textwidth, height=0.4\textheight, ymin=0	]
 			\addplot table [x=tasks, y=80x64, col sep=comma] {times/mpi_speedup.csv};
 			\addplot table [x=tasks, y=160x128, col sep=comma] {times/mpi_speedup.csv};
 			\addplot table [x=tasks, y=320x256, col sep=comma] {times/mpi_speedup.csv};
@@ -348,7 +348,7 @@ Xήρας
 \end{figure}
 
 \subsection{Efficiency}
-\begin{table}[h]
+\begin{table}[h!]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -363,18 +363,18 @@ Xήρας
 	\label{mpi:table:efficiency}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[h!]
 	\centering
 
 	\begin{tikzpicture}
-		\begin{axis}[xlabel={Nodes}, xtick = data, ylabel={Speed-up}, width=\textwidth, height=0.7\textheight, ymin=0	]
+		\begin{axis}[xlabel={Nodes}, xtick = data, ylabel={Speed-up}, width=0.7\textwidth, height=0.4\textheight, ymin=0	]
 			\addplot table [x=nodes, y=80x64, col sep=comma] {times/mpi_efficiency.csv};
-			\addplot table [x=nodes, y=160x128, col sep=comma] {times/mpi_speedup.csv};
-			\addplot table [x=nodes, y=320x256, col sep=comma] {times/mpi_speedup.csv};
-			\addplot table [x=nodes, y=640x512, col sep=comma] {times/mpi_speedup.csv};
-			\addplot table [x=nodes, y=1280x1024, col sep=comma] {times/mpi_speedup.csv};
-			\addplot table [x=nodes, y=2560x2048, col sep=comma] {times/mpi_speedup.csv};
-			\addplot table [x=nodes, y=5120x4096, col sep=comma] {times/mpi_speedup.csv};
+			\addplot table [x=nodes, y=160x128, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=320x256, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=640x512, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=1280x1024, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=2560x2048, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=5120x4096, col sep=comma] {times/mpi_efficiency.csv};
 			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
 		\end{axis}
 	\end{tikzpicture}
@@ -389,7 +389,112 @@ Xήρας
 \subsection{Ανάλυση Βελτιώσεων}
 Κάτσο
 \subsection{Χρόνοι}
-Κάτσο
+\begin{table}[h!]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_conv_times.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn\_conv}
+	\label{mpi_conv:table:times}
+\end{table}
+
+\begin{figure}[h!]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Time (seconds)}, width=0.7\textwidth, height=0.4\textheight, ymin=0, ymax=10]
+			\addplot table [x=tasks, y=80x64, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=160x128, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=320x256, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=640x512, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=1280x1024, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=2560x2048, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=5120x4096, col sep=comma] {times/mpi_conv_times.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn\_conv προς πλήθος Tasks}
+	\label{mpi_conv:plot:times}
+\end{figure}
+
+\subsection{Speed-up}
+\begin{table}[h!]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_conv_speedup.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Speed-up για το mpi\_heat2Dn\_conv}
+	\label{mpi_conv:table:speedup}
+\end{table}
+
+\begin{figure}[h!]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Speed-up}, width=0.7\textwidth, height=0.4\textheight, ymin=0	]
+			\addplot table [x=tasks, y=80x64, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=160x128, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=320x256, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=640x512, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=1280x1024, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=2560x2048, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=5120x4096, col sep=comma] {times/mpi_conv_speedup.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Speed-up του mpi\_heat2Dn\_conv προς πλήθος Tasks}
+	\label{mpi_conv:plot:speedup}
+\end{figure}
+
+\subsection{Efficiency}
+\begin{table}[h!]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_conv_efficiency.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Efficiency για το mpi\_heat2Dn\_conv}
+	\label{mpi_conv:table:efficiency}
+\end{table}
+
+\begin{figure}[h!]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Nodes}, xtick = data, ylabel={Speed-up}, width=0.7\textwidth, height=0.4\textheight, ymin=0	]
+			\addplot table [x=nodes, y=80x64, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=160x128, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=320x256, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=640x512, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=1280x1024, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=2560x2048, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=5120x4096, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Efficiency του mpi\_heat2Dn\_conv προς πλήθος Nodes}
+	\label{mpi_conv:plot:speedup}
+\end{figure}
 
 \section{Βελτιωμένο Υβριδικό Πρόγραμμα MPI \& OpenMP με Σύγκλιση}
 \subsection{Γενικά}
