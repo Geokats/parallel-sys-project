@@ -167,6 +167,12 @@ the values of the neighboring grid points.
 
 Όπου $c_x = c_y = 0.1$ σταθερές.
 
+\subsection{Σημείωση Σχετικά με τους Χρόνους}
+Θα θέλαμε να σημειώσουμε ότι οι χρόνοι που παρουσιάζονται στην παρούσα εργασία
+συνάδουν αόριστα με τους αναμενόμενους. Η απόκλιση αυτή θεωρούμε πως οφείλεται
+στο μεγάλο φόρτο που υπέστη το cluster του hellasgrid και πιθανώς στον τρόπο
+διαχείρισης των jobs από το σύστημα.
+
 \section{Μεταγλώττιση \& Εκτέλεση}
 \subsection{Μεταγλώττιση}
 Τα προγράμματα μεταγλωττίζονται με τις παρακάτω εντολές και παράγουν ένα
@@ -200,11 +206,17 @@ the values of the neighboring grid points.
 
 \section{Εργαλεία Ανάπτυξης Project}
 \subsection{Version Control (Git/Github)}
-Για την καλύτερη διαχείρηση των εκδόσεων του κώδικα και των αλλαγών
-χρησιμοποιείται το πρόγραμμα git και η πλατφόρμα Github.
+Για την καλύτερη διαχείρηση των εκδόσεων του κώδικα και των αλλαγών καθώς και
+για τη συνεργασία μεταξύ των μελών της ομάδας χρησιμοποιείται το πρόγραμμα git
+και η πλατφόρμα Github.
 
 \section{Οργάνωση Αρχείων \& Φακέλων}
-\begin{wrapfigure}[7]{l}{0.3\textwidth}
+Ο κώδικας για κάθε διαφορετική έκδοση που περιγράφουμε βρίσκεται και σε
+διαφορετικό αρχείο. Αυτό συνέβη κυριώς για δική μας διευκόλυνση στην εκτέλεση
+των δοκιμών.
+
+\begin{figure}[H]%[12]{l}{0.3\textwidth}
+	\centering
 	\begin{forest}
 		for tree={
 		font=\ttfamily,
@@ -229,69 +241,459 @@ the values of the neighboring grid points.
 			[doc
 				[readme
 					% [Makefile]
-					% [readme.pdf]
+					[readme.pdf]
 					% [readme.xtx]
 					[...]
 				]
 				[...]
 			]
+			[mpi\_heat2Dn.c]
+			[mpi\_heat2Dn\_conv.c]
+			[mpi\_heat2Dn\_hybrid.c]
+			[mpi\_heat2Dn\_par\_out.c]
 		]
 	\end{forest}
 
-	% \caption{Κατάλογος Αρχείων}
-\end{wrapfigure}
+	\caption{Κατάλογος Αρχείων}
+\end{figure}
 
-Ο κώδικας οργανώνεται σε διαφορετικά αρχεία ανάλογα με το σκοπό και τη
-λειτουργικότητά του. Συγκεκριμένα στα εξής αρχεία:
-
-\subsection{Οργάνωση Αρχείων}
+\clearpage
 
 \section{Βελτιωμένο Πρόγραμμα MPI}
-\subsection{Γενικά}
 \subsection{Ανάλυση Βελτιώσεων}
 \subsubsection{Διαμοιρασμός σε 2 Διαστάσεις}
-Χήρας
-\subsubsection{Άλω Εξωτερικών Σημείων}
-Xήρας
-\subsubsection{Workflow Επικοινωνιών - Υπολογισμός}
-Χήρας
-\subsubsection{Πρώτα Receive - Μετά Send}
-Χήρας
-\subsubsection{Datatypes Σειρών - Στηλών}
-Κάτσο
-\subsubsection{Υπολογισμός Γειτόνων}
-Κάτσο
-\subsubsection{Αποφυγή Ifs για Επικοινωνίες Γειτόνων}
-Κάτσο
-\subsubsection{Γείτονες σε ίδιο κόμβο}
-Κάτσο
-\subsubsection{Persisten Communication}
-Χήρας
-\subsubsection{Δυναμικοί Πίνακες}
-Χήρας
-\subsubsection{11 ???}
+Ο διαμοιρασμός του πίνακα γίνεται πλέον σε 2 διαστάσεις αντί μιας.
+Χρησιμοποιούμε το cartesian topology κομμάτι (βιβλιοθήκη?) του MPI για αυτό το
+διαμοιρασμό. Έτσι, κάθε διεργασία έχει πλέον εώς και 4 γείτονες, ενώ το taskid
+της αλλάζει ωστε να αντιπροσωπεύει τη θέση της στον καρτεσιανό διαχωρισμό.
 
-\subsubsection{Compile με -Ο3}
-Χήρας
-Χρειάζεται να μπει εδώ; Το αναφέρω στη μετταγλώτιση
+\subsubsection{Άλω Εξωτερικών Σημείων}
+Το μέγεθος πίνακα κάθε διεργασίας έχει αυξηθεί κατά 2 σε κάθε κατεύθυνση (1
+στήλη στην αρχή και στο τέλος, 1 σειρά στην αρχή και στο τέλος) σχηματίζοντας
+άλω (halo points). Εκεί αποθηκεύονται οι γειτονικές τιμές που απαιτούνται απο τα
+εξωτερικά σημεία για τον υπολογισμό της νέας τιμής τους. Η ανταλλαγή αυτών των
+πληροφοριών δεν γίνεται μεμονωμένα, αλλά με αποστολή/λήψη ολόκληρων στηλών και
+σειρών ανά φορά, για αποφυγή καθυστέρησης (latency) στην επικοινωνία.
+
+\subsubsection{Workflow Επικοινωνιών - Υπολογισμός}
+Το κυρίως τμήμα της επανάληψης έχει αλλάξει δραστικά δομή.
+
+Χρησιμοποιούμε non-blocking επικοινωνία (Isend) για να στείλουμε τις τιμές των
+εξωτερικών σημείων στους ανάλογους γείτονές της διεργασίας, ενώ αντίστοιχα
+λαμβάνονται (Irecv) χωρίς blocking οι τιμές των halo points. Μέχρι να
+ολοκληρωθεί η επικοινωνία, η διεργασία υπολογίζει τις εσωτερικές τιμές του grid
+της, οι οποίες βασίζονται σε δεδομένα που ήδη έχει.
+
+Έπειτα περιμένει να ολοκληρωθεί η λήψη των halo points, με 4 Wait για τα ανάλογα
+requests. Αφού τα λάβει, η διεργασία υπολογίζει την νέα τιμή των εξωτερικών
+στοιχείων της. Τέλος, αφού περιμένει βεβαίωση ολοκλήρωσης της αποστολής (4 ακόμα
+Wait), αλλάζει τον "νέο" πίνακα σε "παλιό", αλλάζοντας απλά την μεταβλητή που
+φέρει τον ενεργό πίνακα.
+
+\subsubsection{Πρώτα Receive - Μετά Send}
+Η νέα σειρά της λήψης (1η) και της αποστολής (2η), που επιτρέπεται λόγω του
+non-blocking communication, βεβαιώνει το ότι οι διεργασίες θα είναι έτοιμες για
+λήψη, όταν γίνει η αποστολή,μειώνοντας την καθυστέρηση.
+
+\subsubsection{Datatypes Σειρών - Στηλών}
+Χρησιμοποιούμε 2 δομές (MPI\_Type\_vector) για να περιγράψουμε τις στήλες και τις
+σειρές. Έτσι η ανταλλαγή τους γίνεται άμεσα και αποφεύγεται αντιγραφή τιμών,
+ή χρήση buffer, για τη λήψη και την αποστολή.
+
+Συγκεκριμένα, η δομή της σειράς (MPI\_ROW) έχει columns στοιχεία, δηλαδή όσες
+στήλες έχει ο πίνακας της διεργασίας. Κάθε στοιχείο είναι ένας MPI\_FLOAT, και
+απέχει 1 στοιχείο απο το επόμενο.
+
+Αντίστοιχα, η δομή της στήλης, έχει rows στοιχεία, δηλαδή όσες σειρές έχει ο
+πίνακας της διεργασίας. Κάθε στοιχείο είναι ένας MPI\_FLOAT, και απέχει
+columns+2 στοιχεία απο το επόμενο.
+
+\subsubsection{Υπολογισμός Γειτόνων}
+Ο υπολογισμός των γειτόνων κάθε διεργασίας γίνεται μόνο μια φορά στην αρχή, μέσω
+συναρτήσεων της καρτεσιανής τοπολογίας. Οι γείτονες φυσικά είναι σταθεροί κατά
+τη διάρκεια μιας εκτέλεσης.
+
+\subsubsection{Αποφυγή Ifs για Επικοινωνίες Γειτόνων}
+Ορίζουμε τα ranks για τους ανύπαρκτους γείτονες κάθε διεργασίας ως
+MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλεγχοι (if, case).
+
+Οι τιμές στις αντίστοιχες θέσεις του halo αρχικοποιούνται σε 0, και δεν αλλάζουν.
+
+\subsubsection{Γείτονες σε ίδιο κόμβο}
+Οι γειτονικές διεργασίες τοποθετούνται όσο είναι δυνατόν στους ίδιους κόμβους,
+για να ελαττώνεται η καθυστέρηση του κόστους επικοινωνίας. Αυτό επιτυγχάνεται
+αυτόματα μέσω των διεργασίων του cartesian topology. Ελέγχουμε την επιτυχία του
+με το MPI\_Get\_processor\_name.
+
+\subsubsection{Persistent Communication}
+Καθώς οι γείτονες είναι σταθεροί, εφαρμόζουμε persistent communication.
+
+Δημιουργούμε 2 πίνακες send request (s\_array), και 2 receive request (r\_array),
+έναν για κάθε instance του πίνακα (1ο - 2ο). Κάθε θέση αφορά σε έναν γείτονα,
+με MPI\_Send\_init/MPI\_Recv\_init στους αντίστοιχους πίνακες. Κάθε φορά
+χρησιμοποιείται το request του "τωρινού" πίνακα. Μέσα στην επανάληψη, απλά
+καλείται με MPI\_Start η ανάλογη επικοινωνιακή συνάρτηση, με τους ήδη
+αποθηκευμένους παραμέτρους. Έτσι αποφεύγουμε τον επαναυπολογισμό τους.
+
+\subsubsection{Δυναμικοί Πίνακες}
+Αποφεύγουμε την αντιγραφή τιμών μεταξύ των πινάκων, ανταλλάζοντας απλά την τιμή
+της μεταβλητής iz, που υποδεικνύει τον τωρινό πίνακα, απο 0 σε 1 και αντίστροφα.
 
 \subsection{Χρόνοι}
-Κάτσο
+Στο παρακάτω πίνακα φαίνονται οι μετρήσεις χρόνων που πήραμε τρέχοντας το
+πρόγραμμα mpi\_heat2Dn στο cluster του hellasgrid.
+
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_times.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn}
+	\label{mpi:table:times}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Time (seconds)}, width=0.7\textwidth, height=0.4\textheight, ymin=0, ymax=10]
+			\addplot table [x=tasks, y=80x64, col sep=comma] {times/mpi_times.csv};
+			\addplot table [x=tasks, y=160x128, col sep=comma] {times/mpi_times.csv};
+			\addplot table [x=tasks, y=320x256, col sep=comma] {times/mpi_times.csv};
+			\addplot table [x=tasks, y=640x512, col sep=comma] {times/mpi_times.csv};
+			\addplot table [x=tasks, y=1280x1024, col sep=comma] {times/mpi_times.csv};
+			\addplot table [x=tasks, y=2560x2048, col sep=comma] {times/mpi_times.csv};
+			\addplot table [x=tasks, y=5120x4096, col sep=comma] {times/mpi_times.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn προς πλήθος Tasks}
+	\label{mpi:plot:times}
+\end{figure}
+
+\subsection{Speed-up}
+Για τους χρόνους που μετρήσαμε προκύπτουν τα εξής speed-up.
+
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_speedup.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Speed-up για το mpi\_heat2Dn}
+	\label{mpi:table:speedup}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Speed-up}, width=0.7\textwidth, height=0.4\textheight, ymin=0	]
+			\addplot table [x=tasks, y=80x64, col sep=comma] {times/mpi_speedup.csv};
+			\addplot table [x=tasks, y=160x128, col sep=comma] {times/mpi_speedup.csv};
+			\addplot table [x=tasks, y=320x256, col sep=comma] {times/mpi_speedup.csv};
+			\addplot table [x=tasks, y=640x512, col sep=comma] {times/mpi_speedup.csv};
+			\addplot table [x=tasks, y=1280x1024, col sep=comma] {times/mpi_speedup.csv};
+			\addplot table [x=tasks, y=2560x2048, col sep=comma] {times/mpi_speedup.csv};
+			\addplot table [x=tasks, y=5120x4096, col sep=comma] {times/mpi_speedup.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Speed-up του mpi\_heat2Dn προς πλήθος Tasks}
+	\label{mpi:plot:speedup}
+\end{figure}
+
+\subsection{Efficiency}
+Αντίστοιχα για τους συγκεκριμένους χρόνους προκύπτουν οι εξής τιμές efficiency.
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_efficiency.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Efficiency για το mpi\_heat2Dn}
+	\label{mpi:table:efficiency}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Nodes}, xtick = data, ylabel={Speed-up}, width=0.7\textwidth, height=0.4\textheight, ymin=0	]
+			\addplot table [x=nodes, y=80x64, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=160x128, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=320x256, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=640x512, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=1280x1024, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=2560x2048, col sep=comma] {times/mpi_efficiency.csv};
+			\addplot table [x=nodes, y=5120x4096, col sep=comma] {times/mpi_efficiency.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Efficiency του mpi\_heat2Dn προς πλήθος Nodes}
+	\label{mpi:plot:speedup}
+\end{figure}
+
+\pagebreak
+\clearpage
 
 \section{Βελτιωμένο Πρόγραμμα MPI με Σύγκλιση}
 \subsection{Γενικά}
-Κάτσο
-\subsection{Ανάλυση Βελτιώσεων}
-Κάτσο
+Ο έλεγχος σύγκλισης τιμών συμβαίνει ανά CONV\_PERIOD βήματα της επανάληψης. Στα
+κατάλληλα βήματα, η συνάρτηση υπολογισμού των νέων τιμών update αλλάζει, και
+προστίθεται σε αυτή ο έλεγχος για διαφορά των παλιών/νέων τιμών. Έτσι
+αποφεύγεται ενα περιττό διπλό for/iteration του πίνακα αρχικά για τον υπολογισμό
+των νέων τιμών και στη συνέχεια για τον έλεγχο αυτόν.
+
+Στο τέλος του αναλόγου βήματος, γίνεται το reduce που υπολογίζει τη συνολική
+σύγκλιση των διεργασιών.
+
+Στο συγκεκριμένο project, καθώς θέλαμε όλα τα βήματα των ελέγχων να είναι ίσα,
+δεν εκμεταλλευόμαστε την πληροφορία αυτή, αλλά έχουμε υπογραμμίσει με σχόλιο το
+σημείο που η διακοπή του αλγορίθμου θα γινόταν.
+
 \subsection{Χρόνοι}
-Κάτσο
+Παρακάτω βρίσκονται οι χρόνοι εκτέλεσης του προγράμματος αφού προσθέσαμε έλεγχο
+σύγκλισης όπως περιγράφουμε παραπάνω.
+
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_conv_times.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn\_conv}
+	\label{mpi_conv:table:times}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Time (seconds)}, width=0.7\textwidth, height=0.4\textheight, ymin=0, ymax=10]
+			\addplot table [x=tasks, y=80x64, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=160x128, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=320x256, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=640x512, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=1280x1024, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=2560x2048, col sep=comma] {times/mpi_conv_times.csv};
+			\addplot table [x=tasks, y=5120x4096, col sep=comma] {times/mpi_conv_times.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn\_conv προς πλήθος Tasks}
+	\label{mpi_conv:plot:times}
+\end{figure}
+
+\clearpage
+
+\subsection{Speed-up}
+Αντίστοιχα για αυτούς τους χρόνους εκτέλεσης υπολογίζουμε το speed-up που
+προκύπτει:
+
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_conv_speedup.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Speed-up για το mpi\_heat2Dn\_conv}
+	\label{mpi_conv:table:speedup}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Tasks}, xtick = data, ylabel={Speed-up}, width=0.7\textwidth, height=0.4\textheight, ymin=0	]
+			\addplot table [x=tasks, y=80x64, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=160x128, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=320x256, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=640x512, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=1280x1024, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=2560x2048, col sep=comma] {times/mpi_conv_speedup.csv};
+			\addplot table [x=tasks, y=5120x4096, col sep=comma] {times/mpi_conv_speedup.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Speed-up του mpi\_heat2Dn\_conv προς πλήθος Tasks}
+	\label{mpi_conv:plot:speedup}
+\end{figure}
+
+\subsection{Efficiency}
+Επίσης για τους χρόνους εκτέλεσης παρατηρούνται τα εξής efficincies ανα
+περίπτωση.
+
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{Tasks} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_conv_efficiency.csv}{nodes=\nodes, tasks=\tasks, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \tasks & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Efficiency για το mpi\_heat2Dn\_conv}
+	\label{mpi_conv:table:efficiency}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+
+	\begin{tikzpicture}
+		\begin{axis}[xlabel={Nodes}, xtick = data, ylabel={Speed-up}, width=0.7\textwidth, height=0.4\textheight, ymin=0	]
+			\addplot table [x=nodes, y=80x64, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=160x128, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=320x256, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=640x512, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=1280x1024, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=2560x2048, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\addplot table [x=nodes, y=5120x4096, col sep=comma] {times/mpi_conv_efficiency.csv};
+			\legend{$80\times64$, $160\times128$, $320\times256$, $640\times512$, $1280\times1024$, $2560\times2048$, $5120\times4096$}
+		\end{axis}
+	\end{tikzpicture}
+
+	\caption{Efficiency του mpi\_heat2Dn\_conv προς πλήθος Nodes}
+	\label{mpi_conv:plot:speedup}
+\end{figure}
+
+\pagebreak
+\clearpage
 
 \section{Βελτιωμένο Υβριδικό Πρόγραμμα MPI \& OpenMP με Σύγκλιση}
 \subsection{Γενικά}
-Κάτσο
-\subsection{Ανάλυση Βελτιώσεων}
-Κάτσο
+Στη συνέχεια δημιουργήσαμε ένα υβριδικό πρόγραμμα συνδιάζοντας MPI και OpenMP.
+Με τη χρήση του OpenMp δημιουργήσαμε threads τα οποία μοιράζονται το φόρτο των
+for loops, προσπαθώντας έτσι να βελτιώσουμε την απόδοση του προγράμματος.
+
+\subsection{Βελτιώσεις}
+\subsubsection{Δημιουργία Threads}
+Για να είναι όσο το δυνατόν πιο αποδοτικό το εν λόγω πρόγραμμα, η δημιουργία των
+threads αντί να γίνεται κάθε φορά που φτάνουμε στο σημείο των υπολογισμών,
+γίνεται εκτός της κύριας επανάληψης. Όταν φτάσουμε στο σημείο των
+υπολογισμών, κάνουμε schedule στα threads την δουλειά που πρέπει να γίνει.
+
+\subsubsection{Έλεγχος σύγλισης}
+Όπως και στο προηγούμενο πρόγραμμα, ο έλεγχος σύγκλισης γίνεται ταυτόχρονα με
+τον υπολογισμό των νέων τιμών έτσι ώστε να αποφύγουμε να κάνουμε τις διπλάσιες
+επαναλήψεις πάνω στον πίνακα.
+
 \subsection{Χρόνοι}
-Κάτσο
+Στη συνέχεια παραθέτουμε τους χρόνους εκτέλεσης του υβριδικού προγράμματος για
+διάφορους αριθμούς nodes, processes per node και threads.
+
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{PPN} & \textbf{Threads} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_hybrid_times.csv}{nodes=\nodes, ppn=\ppn, threads=\threads, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \ppn & \threads & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn\_hybrid}
+	\label{mpi_hybrid:table:times}
+\end{table}
+
+\subsection{Speed-up}
+Στον παρακάτω πίνακα βλέπουμε το speed-up που προκύπτει για κάθε περίπτωση.
+
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{PPN} & \textbf{Threads} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_hybrid_speedup.csv}{nodes=\nodes, ppn=\ppn, threads=\threads, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \ppn & \threads & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Speed-up για το mpi\_heat2Dn\_hybrid}
+	\label{mpi_hybrid:table:speedup}
+\end{table}
+
+\subsection{Efficiency}
+Τέλος, στο επόμενο πίνακα παραθέτουμε το efficiency που προκύπτει για κάθε
+περίπτωση.
+
+\begin{table}[H]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{PPN} & \textbf{Threads} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_hybrid_efficiency.csv}{nodes=\nodes, ppn=\ppn, threads=\threads, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \ppn & \threads & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Efficiency για το mpi\_heat2Dn\_hybrid}
+	\label{mpi_hybrid:table:efficiency}
+\end{table}
+
+\pagebreak
+\clearpage
+
+\section{Parallel Output}
+Σχεδιάσαμε ένα σύστημα Parallel Output των τιμών του πίνακα κάθε διεργασίας σε
+ένα αρχείο.
+
+Η διεργασία υπολογίζει βάσει των καρτεσιανών συντεταγμένων της το σημείο του
+αρχείου στο οποίο πρέπει να γράψει, και τυπώνει το κομμάτι του τελικού πίνακά
+της εκεί (δίχως φυσικά τα halo points).
+
+Συγκεκριμένα, ο τρόπος που υπολογίζεται η απόσταση (σε bytes απο την αρχή του
+αρχείου) στην οποία πρέπει να γράψει μια διεργασία, είναι η εξής :
+
+Αρχικά υπολογίζεται το μέγεθος σε bytes του output μίας διεργασίας
+(output\_size), καθώς και μίας σειράς (row\_size). Γνωρίζουμε ότι όλες οι
+διεργασίες σε πιο "πάνω" καρτεσιανή σειρά του πίνακα θα έχουν γράψει όλα τα
+δεδομένα τους πριν απο τη συγκεκριμένη διεργασία. Έτσι, σίγουρα προχωράμε κατά
+output\_size * coord[0] * cart\_dims[1].
+
+Έπειτα, καθώς κάθε σειρά μιας διεργασίας πρέπει να γράφεται μετά την αντίστοιχη
+του αριστερού, και πριν την αντίστοιχη του δεξίου της γείτονα, προχωράμε
+επαναληπτικά κατα row\_size * coord[1]. Εκεί τυπώνουμε την σειρά με κενά ανάμεσα
+στους αριθμούς. Αν η διεργασία δεν έχει δεξί γείτονα, τον τελευταίο αριθμό κάθε
+σειρά της ακολουθεί ενα newline αντί κενού.
+
+Δεν μπορέσαμε να ελέγξουμε διεξοδικά το σύστημα αυτό, λόγω φόρτου των
+μηχανημάτων του hellasgrid.
 
 \end{document}

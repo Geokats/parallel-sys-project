@@ -162,9 +162,9 @@ int main (int argc, char *argv[]) {
 
   /* Create row and column datatypes. This way we can efficiently send a column
   * from the table without having to copy it to a buffer. More specifically:
-  * A row has <column-size> blocks each of which contain 1 MPI_DOUBLE and there
+  * A row has <column-size> blocks each of which contain 1 MPI_FLOAT and there
   * is 1 block between the starts of each block in our table.
-  * A column has <row-size> blocks each of which contain 1 MPI_DOUBLE and
+  * A column has <row-size> blocks each of which contain 1 MPI_FLOAT and
   * there are <row-size> blocks between the start of each block in our table. */
   MPI_Type_vector(columns, 1, 1, MPI_FLOAT, &MPI_ROW);
   MPI_Type_vector(rows, 1, columns+2, MPI_FLOAT , &MPI_COLUMN);

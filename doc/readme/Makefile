@@ -1,6 +1,6 @@
 FILENAME = readme
 
-$(FILENAME).pdf: $(FILENAME).xtx
+$(FILENAME).pdf: $(FILENAME).xtx ./times/*
 	xelatex $(FILENAME).xtx
 	xelatex $(FILENAME).xtx
 
