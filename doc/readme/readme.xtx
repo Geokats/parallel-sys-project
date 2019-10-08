@@ -276,6 +276,9 @@ Xήρας
 Χρειάζεται να μπει εδώ; Το αναφέρω στη μετταγλώτιση
 
 \subsection{Χρόνοι}
+Στο παρακάτω πίνακα φαίνονται οι μετρήσεις χρόνων που πήραμε τρέχοντας το
+πρόγραμμα mpi\_heat2Dn στο cluster του hellasgrid.
+
 \begin{table}[h!]
 	\centering
 	\makebox[\textwidth][c]{
@@ -290,6 +293,10 @@ Xήρας
 	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn}
 	\label{mpi:table:times}
 \end{table}
+
+Στη συνέχεια αναπαριστάμε γραφικά την αλλαγή του χρόνου εκτέλεσης για κάθε
+μέγεθος του προβλήματος καθώς αυξάνονται τα tasks που εργάζονται για να το
+λύσουν.
 
 \begin{figure}[h!]
 	\centering
@@ -502,6 +509,51 @@ Xήρας
 \subsection{Ανάλυση Βελτιώσεων}
 Κάτσο
 \subsection{Χρόνοι}
-Κάτσο
+\begin{table}[h!]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{PPN} & \textbf{Threads} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_hybrid_times.csv}{nodes=\nodes, ppn=\ppn, threads=\threads, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \ppn & \threads & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Χρόνοι Εκτέλεσης mpi\_heat2Dn\_hybrid}
+	\label{mpi_hybrid:table:times}
+\end{table}
+
+\subsection{Speed-up}
+\begin{table}[h!]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{PPN} & \textbf{Threads} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_hybrid_speedup.csv}{nodes=\nodes, ppn=\ppn, threads=\threads, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \ppn & \threads & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Speed-up για το mpi\_heat2Dn\_hybrid}
+	\label{mpi_hybrid:table:speedup}
+\end{table}
+
+\subsection{Efficiency}
+\begin{table}[h!]
+	\centering
+	\makebox[\textwidth][c]{
+	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
+		\hline
+		\textbf{Nodes} & \textbf{PPN} & \textbf{Threads} & $80\times64$ & $160\times128$ & $320\times256$ & $640\times512$ & $1280\times1024$ & $2560\times2048$ & $5120\times4096$ \\
+		\hline \hline
+		\csvreader[late after line=\\\hline]{./times/mpi_hybrid_efficiency.csv}{nodes=\nodes, ppn=\ppn, threads=\threads, 80x64=\a, 160x128=\b, 320x256=\c, 640x512=\d, 1280x1024=\e, 2560x2048=\f, 5120x4096=\g}
+		{\nodes & \ppn & \threads & \a & \b & \c & \d & \e & \f & \g}
+	\end{tabular}
+	}
+	\caption{Efficiency για το mpi\_heat2Dn\_hybrid}
+	\label{mpi_hybrid:table:efficiency}
+\end{table}
 
 \end{document}
