@@ -251,6 +251,7 @@ the values of the neighboring grid points.
 			[mpi\_heat2Dn\_conv.c]
 			[mpi\_heat2Dn\_hybrid.c]
 			[mpi\_heat2Dn\_par\_out.c]
+			[pbs\_script.sh]
 		]
 	\end{forest}
 
