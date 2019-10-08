@@ -331,7 +331,7 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 Στο παρακάτω πίνακα φαίνονται οι μετρήσεις χρόνων που πήραμε τρέχοντας το
 πρόγραμμα mpi\_heat2Dn στο cluster του hellasgrid.
 
-\begin{table}[h!]
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -346,11 +346,7 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 	\label{mpi:table:times}
 \end{table}
 
-Στη συνέχεια αναπαριστάμε γραφικά την αλλαγή του χρόνου εκτέλεσης για κάθε
-μέγεθος του προβλήματος καθώς αυξάνονται τα tasks που εργάζονται για να το
-λύσουν.
-
-\begin{figure}[h!]
+\begin{figure}[H]
 	\centering
 
 	\begin{tikzpicture}
@@ -371,7 +367,9 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 \end{figure}
 
 \subsection{Speed-up}
-\begin{table}[h!]
+Για τους χρόνους που μετρήσαμε προκύπτουν τα εξής speed-up.
+
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -386,7 +384,7 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 	\label{mpi:table:speedup}
 \end{table}
 
-\begin{figure}[h!]
+\begin{figure}[H]
 	\centering
 
 	\begin{tikzpicture}
@@ -407,7 +405,8 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 \end{figure}
 
 \subsection{Efficiency}
-\begin{table}[h!]
+Αντίστοιχα για τους συγκεκριμένους χρόνους προκύπτουν οι εξής τιμές efficiency.
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -422,7 +421,7 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 	\label{mpi:table:efficiency}
 \end{table}
 
-\begin{figure}[h!]
+\begin{figure}[H]
 	\centering
 
 	\begin{tikzpicture}
@@ -464,7 +463,7 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 Παρακάτω βρίσκονται οι χρόνοι εκτέλεσης του προγράμματος αφού προσθέσαμε έλεγχο
 σύγκλισης όπως περιγράφουμε παραπάνω.
 
-\begin{table}[h!]
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -479,7 +478,7 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 	\label{mpi_conv:table:times}
 \end{table}
 
-\begin{figure}[h!]
+\begin{figure}[H]
 	\centering
 
 	\begin{tikzpicture}
@@ -499,8 +498,13 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 	\label{mpi_conv:plot:times}
 \end{figure}
 
+\clearpage
+
 \subsection{Speed-up}
-\begin{table}[h!]
+Αντίστοιχα για αυτούς τους χρόνους εκτέλεσης υπολογίζουμε το speed-up που
+προκύπτει:
+
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -515,7 +519,7 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 	\label{mpi_conv:table:speedup}
 \end{table}
 
-\begin{figure}[h!]
+\begin{figure}[H]
 	\centering
 
 	\begin{tikzpicture}
@@ -536,7 +540,10 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 \end{figure}
 
 \subsection{Efficiency}
-\begin{table}[h!]
+Επίσης για τους χρόνους εκτέλεσης παρατηρούνται τα εξής efficincies ανα
+περίπτωση.
+
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c||c|c|c|c|c|c|c|}%
@@ -551,7 +558,7 @@ MPI\_PROC\_NULL, ώστε να αποφεύγονται περιττοί έλε�
 	\label{mpi_conv:table:efficiency}
 \end{table}
 
-\begin{figure}[h!]
+\begin{figure}[H]
 	\centering
 
 	\begin{tikzpicture}
@@ -596,7 +603,7 @@ threads αντί να γίνεται κάθε φορά που φτάνουμε �
 Στη συνέχεια παραθέτουμε τους χρόνους εκτέλεσης του υβριδικού προγράμματος για
 διάφορους αριθμούς nodes, processes per node και threads.
 
-\begin{table}[h!]
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
@@ -612,7 +619,9 @@ threads αντί να γίνεται κάθε φορά που φτάνουμε �
 \end{table}
 
 \subsection{Speed-up}
-\begin{table}[h!]
+Στον παρακάτω πίνακα βλέπουμε το speed-up που προκύπτει για κάθε περίπτωση.
+
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
@@ -628,7 +637,10 @@ threads αντί να γίνεται κάθε φορά που φτάνουμε �
 \end{table}
 
 \subsection{Efficiency}
-\begin{table}[h!]
+Τέλος, στο επόμενο πίνακα παραθέτουμε το efficiency που προκύπτει για κάθε
+περίπτωση.
+
+\begin{table}[H]
 	\centering
 	\makebox[\textwidth][c]{
 	\begin{tabular}{|c|c|c||c|c|c|c|c|c|c|}%
@@ -642,5 +654,34 @@ threads αντί να γίνεται κάθε φορά που φτάνουμε �
 	\caption{Efficiency για το mpi\_heat2Dn\_hybrid}
 	\label{mpi_hybrid:table:efficiency}
 \end{table}
+
+\pagebreak
+\clearpage
+
+\section{Parallel Output}
+Σχεδιάσαμε ένα σύστημα Parallel Output των τιμών του πίνακα κάθε διεργασίας σε
+ένα αρχείο.
+
+Η διεργασία υπολογίζει βάσει των καρτεσιανών συντεταγμένων της το σημείο του
+αρχείου στο οποίο πρέπει να γράψει, και τυπώνει το κομμάτι του τελικού πίνακά
+της εκεί (δίχως φυσικά τα halo points).
+
+Συγκεκριμένα, ο τρόπος που υπολογίζεται η απόσταση (σε bytes απο την αρχή του
+αρχείου) στην οποία πρέπει να γράψει μια διεργασία, είναι η εξής :
+
+Αρχικά υπολογίζεται το μέγεθος σε bytes του output μίας διεργασίας
+(output\_size), καθώς και μίας σειράς (row\_size). Γνωρίζουμε ότι όλες οι
+διεργασίες σε πιο "πάνω" καρτεσιανή σειρά του πίνακα θα έχουν γράψει όλα τα
+δεδομένα τους πριν απο τη συγκεκριμένη διεργασία. Έτσι, σίγουρα προχωράμε κατά
+output\_size * coord[0] * cart\_dims[1].
+
+Έπειτα, καθώς κάθε σειρά μιας διεργασίας πρέπει να γράφεται μετά την αντίστοιχη
+του αριστερού, και πριν την αντίστοιχη του δεξίου της γείτονα, προχωράμε
+επαναληπτικά κατα row\_size * coord[1]. Εκεί τυπώνουμε την σειρά με κενά ανάμεσα
+στους αριθμούς. Αν η διεργασία δεν έχει δεξί γείτονα, τον τελευταίο αριθμό κάθε
+σειρά της ακολουθεί ενα newline αντί κενού.
+
+Δεν μπορέσαμε να ελέγξουμε διεξοδικά το σύστημα αυτό, λόγω φόρτου των
+μηχανημάτων του hellasgrid.
 
 \end{document}
